@@ -32,3 +32,7 @@ python -m http.server 8080
 ## 第三方依赖
 
 - 物理库使用 [Matter.js 0.20.0](https://github.com/liabru/matter-js)，MIT 许可证见 [vendor/MATTER-LICENSE.txt](vendor/MATTER-LICENSE.txt)。
+
+## 参考项目
+
+本项目参考了 [YHSome/BigNaiWa](https://github.com/YHSome/BigNaiWa)，感谢原作者。

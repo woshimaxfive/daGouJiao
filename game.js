@@ -500,9 +500,9 @@
   }
 
   function playDrop() {
-    // 短促的气泡起音叠上低频软落声，与狗的挤压回弹相呼应。
-    tone(480, 0.025, 0.012, 'sine');
-    tone(135, 0.075, 0.032, 'triangle', 0.008);
+    // 气泡起音叠上中频软落声，兼顾手机扬声器的可听度。
+    tone(600, 0.04, 0.025, 'sine');
+    tone(320, 0.11, 0.055, 'triangle', 0.01);
   }
 
   function bark(tier, finale) {

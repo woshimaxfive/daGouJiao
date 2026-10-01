@@ -57,17 +57,70 @@
   const dangerTime = document.getElementById('danger-time');
   const liveStatus = document.getElementById('live-status');
 
-  const tierImages = TIERS.map((tier, index) => {
+  const originalImages = ['assets/dog-close.png', 'assets/dog-open.png'].map(src => {
     const image = new Image();
-    image.src = index < 4 ? 'assets/dog-close.png' : 'assets/dog-open.png';
+    image.src = src;
     return image;
   });
+  const tierImages = TIERS.map((tier, index) => originalImages[index < 4 ? 0 : 1]);
   let tierSprites = [];
+  let visualsReady = false;
+  let visualsLoading = false;
+
+  function readyImage(image) {
+    return image.complete && image.naturalWidth > 0;
+  }
+
+  function tierImage(tier) {
+    return [tierImages[tier], ...originalImages].find(readyImage) || tierImages[tier];
+  }
+
+  function refreshVisuals() {
+    buildTierSprites();
+    updateNext();
+    updateTierList();
+    if (result) finalTierImage.src = tierImage(result.maxTier).src;
+  }
+
+  for (const image of originalImages) {
+    image.addEventListener('load', () => {
+      if (!visualsReady) refreshVisuals();
+    });
+  }
+
+  async function loadDogImage(image, src) {
+    if (readyImage(image)) return;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        await new Promise((resolve, reject) => {
+          const finish = error => {
+            clearTimeout(timer);
+            image.removeEventListener('load', loaded);
+            image.removeEventListener('error', failed);
+            if (error) reject(error);
+            else resolve();
+          };
+          const loaded = () => finish();
+          const failed = () => finish(new Error('狗图加载失败'));
+          const timer = setTimeout(() => finish(new Error('狗图加载超时')), 8000);
+          image.addEventListener('load', loaded);
+          image.addEventListener('error', failed);
+          image.src = attempt === 0 ? src : `${src}?v=3&retry=${Date.now()}-${attempt}`;
+          if (readyImage(image)) loaded();
+        });
+        return;
+      } catch (error) {
+        if (attempt === 2) throw error;
+        await new Promise(resolve => setTimeout(resolve, 400 * (attempt + 1)));
+      }
+    }
+  }
 
   function buildTierSprites() {
     // 只缓存彩色透明轮廓，原照片像素覆盖在最上面，不给狗的脸或身体染色。
-    tierSprites = tierImages.map((image, tier) => {
-      if (!image.naturalWidth) return image;
+    tierSprites = TIERS.map((entry, tier) => {
+      const image = tierImage(tier);
+      if (!readyImage(image)) return image;
       const mask = document.createElement('canvas');
       mask.width = mask.height = 1024;
       const maskContext = mask.getContext('2d');
@@ -88,24 +141,37 @@
   }
 
   async function loadOriginalVisuals() {
+    if (visualsLoading || visualsReady) return;
+    visualsLoading = true;
     try {
-      const closed = tierImages[0];
-      const open = tierImages[7];
-      await Promise.all([closed.decode(), open.decode()]);
-      const images = window.DagouVisuals.createFrames(closed, open).map(src => {
+      const [closed, open] = originalImages;
+      await Promise.all([
+        loadDogImage(closed, 'assets/dog-close.png'),
+        loadDogImage(open, 'assets/dog-open.png'),
+      ]);
+      const images = window.DagouVisuals.createFrames(closed, open).map((src, index) => {
+        if (index === 0) return closed;
+        if (index === TIERS.length - 1) return open;
         const image = new Image();
         image.src = src;
         return image;
       });
-      await Promise.all(images.map(image => image.decode()));
+      await Promise.all(images.map(image => {
+        if (typeof image.decode === 'function') return image.decode();
+        if (readyImage(image)) return Promise.resolve();
+        return new Promise((resolve, reject) => {
+          image.onload = resolve;
+          image.onerror = reject;
+        });
+      }));
       tierImages.splice(0, tierImages.length, ...images);
-      buildTierSprites();
-      updateNext();
-      updateTierList();
+      visualsReady = true;
+      refreshVisuals();
     } catch {
-      buildTierSprites();
-      // 直接打开本地文件时部分浏览器禁止 Canvas 导出，仍可使用两张原图游玩。
-      liveStatus.textContent = '中间嘴部状态未能加载，暂用原闭嘴和张嘴图。通过本地服务打开可显示完整过渡。';
+      refreshVisuals();
+      liveStatus.textContent = '部分表情未能加载，暂用已加载的狗图；网络恢复后会再次尝试。';
+    } finally {
+      visualsLoading = false;
     }
   }
 
@@ -304,7 +370,7 @@
     result = roundResult(score, bestAtStart, maxReached);
     displayScore(finalScore, result.score);
     finalTier.textContent = `${result.maxLevel} 级 · ${TIERS[result.maxTier].name}`;
-    finalTierImage.src = tierImages[result.maxTier].src;
+    finalTierImage.src = tierImage(result.maxTier).src;
     finalTierImage.alt = '';
     finalTierNumber.textContent = result.maxLevel;
     recordStatus.textContent = result.isNewRecord ? '刷新最高纪录！' : '下一局继续挑战';
@@ -372,7 +438,7 @@
   function updateNext() {
     nextLabel.textContent = TIERS[nextTier].name;
     nextNumber.textContent = String(nextTier + 1);
-    nextImage.src = tierImages[nextTier].src;
+    nextImage.src = tierImage(nextTier).src;
     nextImage.alt = `下一只：${nextTier + 1} 级${TIERS[nextTier].name}`;
     nextPiece.style.setProperty('--tier-color', TIERS[nextTier].color);
     canvas.setAttribute('aria-label', `大狗叫合成游戏棋盘。当前待投：${currentTier + 1} 级${TIERS[currentTier].name}；下一只：${nextTier + 1} 级${TIERS[nextTier].name}。鼠标点击或触屏松手投放；方向键移动，空格投放。`);
@@ -386,7 +452,7 @@
       if (index <= maxReached) item.classList.add('reached');
       const dot = document.createElement('img');
       dot.className = 'tier-dot';
-      dot.src = tierImages[index].src;
+      dot.src = tierImage(index).src;
       dot.alt = '';
       const portrait = document.createElement('span');
       portrait.className = 'tier-portrait';
@@ -612,7 +678,9 @@
   }
 
   function drawDog(x, y, tier, angle, sprite, pop = 1, squash = 0, squashAngle = 0) {
-    const image = tierSprites[tier] || tierImages[tier];
+    const cached = tierSprites[tier];
+    const image = cached instanceof HTMLCanvasElement || (cached && readyImage(cached))
+      ? cached : tierImage(tier);
     context.save();
     context.translate(x, y);
     if (Math.abs(squash) > 0.0001) {
@@ -797,6 +865,7 @@
   document.getElementById('play-again-button').addEventListener('click', reset);
   soundButton.addEventListener('click', toggleSound);
   window.addEventListener('resize', resizeCanvas);
+  window.addEventListener('online', loadOriginalVisuals);
   function syncEvolutionLayout() { evolutionPanel.open = !mobileLayout.matches; }
   mobileLayout.addEventListener('change', syncEvolutionLayout);
   syncEvolutionLayout();

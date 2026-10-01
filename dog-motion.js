@@ -118,9 +118,13 @@
   function create({ target, canShake, onShake, onState }) {
     const detector = createDetector();
     const tilt = createTilt();
-    const eligible = target.navigator.maxTouchPoints > 0
+    const sensorInput = target.navigator.maxTouchPoints > 0
       && target.matchMedia('(pointer: coarse)').matches;
-    const supported = eligible && target.isSecureContext && !!target.DeviceMotionEvent;
+    const input = sensorInput ? 'sensor' : 'keyboard';
+    const eligible = true;
+    const supported = !sensorInput || (target.isSecureContext && !!target.DeviceMotionEvent);
+    const keys = new Set();
+    let shakeDirection = 1;
     let phase = supported ? 'off' : 'unsupported';
     let generation = 0;
     let listenerAttached = false;
@@ -132,9 +136,10 @@
     const now = () => target.performance.now();
     function getState() {
       const cooldown = Math.ceil(Math.max(0, nextShakeAt - now()) / 1000);
-      const reading = tilt.get(now());
+      const reading = sensorInput ? tilt.get(now())
+        : { ready: true, strength: Number(keys.has('KeyD')) - Number(keys.has('KeyA')) };
       return {
-        eligible, supported, phase,
+        eligible, supported, input, phase,
         enabled: phase === 'checking' || phase === 'active' || phase === 'requesting',
         cooldown: phase === 'active' ? cooldown : 0,
         tilt: phase === 'active' && !target.document.hidden ? reading.strength : 0,
@@ -153,13 +158,18 @@
 
     function detach() {
       if (listenerAttached) {
-        target.removeEventListener('devicemotion', handleMotion);
+        if (sensorInput) target.removeEventListener('devicemotion', handleMotion);
+        else {
+          target.document.removeEventListener('keydown', handleKeyDown);
+          target.document.removeEventListener('keyup', handleKeyUp);
+        }
         listenerAttached = false;
       }
       if (timer !== null) target.clearInterval(timer);
       timer = null;
       detector.reset();
       tilt.reset();
+      keys.clear();
     }
 
     function disable(nextPhase = 'off') {
@@ -169,6 +179,37 @@
       refresh(true);
     }
 
+    function tryShake(direction) {
+      const time = now();
+      if (time < nextShakeAt || !canShake()) return;
+      if (onShake(direction)) {
+        nextShakeAt = time + COOLDOWN_MS;
+        shakeDirection = -direction;
+        detector.reset();
+      }
+    }
+
+    function handleKeyDown(event) {
+      if (phase !== 'active' || target.document.hidden || event.altKey || event.ctrlKey || event.metaKey) return;
+      const element = event.target;
+      if (element?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(element?.tagName || '')) return;
+      if (!['KeyA', 'KeyD', 'KeyW'].includes(event.code)) return;
+      event.preventDefault();
+      const held = keys.has(event.code);
+      keys.add(event.code);
+      if (event.code === 'KeyW' && !held && !event.repeat) {
+        const direction = Number(keys.has('KeyD')) - Number(keys.has('KeyA'));
+        tryShake(direction || shakeDirection);
+      }
+      refresh();
+    }
+
+    function handleKeyUp(event) {
+      if (keys.delete(event.code)) refresh();
+    }
+
+    function clearKeys() { keys.clear(); refresh(); }
+
     function handleMotion(event) {
       if (target.document.hidden || (phase !== 'checking' && phase !== 'active')) return;
       const time = now();
@@ -177,17 +218,22 @@
       lastSignalAt = time;
       phase = 'active';
       tilt.sample(event, time, target.screen?.orientation?.angle ?? target.orientation ?? 0);
-      if (result.direction && time >= nextShakeAt && canShake()) {
-        if (onShake(result.direction)) {
-          nextShakeAt = time + COOLDOWN_MS;
-          detector.reset();
-        }
-      }
+      if (result.direction) tryShake(result.direction);
       refresh();
     }
 
     async function enable() {
       if (!supported) { refresh(true); return; }
+      if (!sensorInput) {
+        keys.clear();
+        phase = 'active';
+        target.document.addEventListener('keydown', handleKeyDown);
+        target.document.addEventListener('keyup', handleKeyUp);
+        listenerAttached = true;
+        timer = target.setInterval(() => refresh(), 250);
+        refresh(true);
+        return;
+      }
       const request = ++generation;
       phase = 'requesting';
       refresh(true);
@@ -221,18 +267,22 @@
       detector.reset();
       tilt.reset();
       nextShakeAt = 0;
+      shakeDirection = 1;
+      keys.clear();
       refresh(true);
     }
 
     target.document.addEventListener('visibilitychange', () => {
       detector.reset();
       tilt.reset();
-      if (!target.document.hidden && listenerAttached) {
+      keys.clear();
+      if (sensorInput && !target.document.hidden && listenerAttached) {
         lastSignalAt = now();
         phase = 'checking';
-        refresh(true);
       }
+      refresh(true);
     });
+    target.addEventListener('blur', clearKeys);
     target.addEventListener('pagehide', () => disable());
 
     return Object.freeze({

@@ -12,7 +12,7 @@
   const { chooseSpawnTier: pickTier, advanceDanger, dangerNotice, roundResult } = window.DagouRules;
   const WIDTH = 420;
   const HEIGHT = 680;
-  const DANGER_Y = 142;
+  const DANGER_Y = 136;
   const DOG_SIZE_SCALE = 1;
   const DANGER_SECONDS = 1.5;
   const REST_SPEED_PER_SECOND = 140;
@@ -443,7 +443,7 @@
     motionButton.setAttribute('aria-pressed', String(state.enabled));
     motionButton.textContent = state.enabled ? '重力：开' : '重力：关';
     const messages = {
-      off: '开启后左右倾斜，也可摇一摇',
+      off: state.input === 'keyboard' ? '开启后按住 A/D 倾斜，W 晃动' : '开启后左右倾斜，也可摇一摇',
       unsupported: '当前浏览器不支持重力感应',
       requesting: '请允许手机运动感应',
       checking: '连接感应中，轻动一下手机',
@@ -452,9 +452,10 @@
     };
     if (state.phase === 'active') {
       const tiltLabel = !state.tiltReady ? '倾斜数据不可用'
-        : state.tilt < -0.15 ? '重力向左' : state.tilt > 0.15 ? '重力向右' : '左右倾斜，移动狗堆';
+        : state.tilt < -0.15 ? '重力向左' : state.tilt > 0.15 ? '重力向右'
+          : state.input === 'keyboard' ? '按住 A/D 左右倾斜' : '左右倾斜，移动狗堆';
       motionStatus.textContent = gameOver ? '本局已结束，重开后可用'
-        : `${tiltLabel} · ${state.cooldown > 0 ? `摇动冷却 ${state.cooldown} 秒` : '可摇一摇'}`;
+        : `${tiltLabel} · ${state.cooldown > 0 ? `摇动冷却 ${state.cooldown} 秒` : state.input === 'keyboard' ? 'W 晃动' : '可摇一摇'}`;
     } else {
       motionStatus.textContent = messages[state.phase];
     }

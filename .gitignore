@@ -1,0 +1,17 @@
+node_modules/
+output/
+.playwright-cli/
+docs/
+test/
+tools/
+assets/*
+!assets/dog-close.png
+!assets/dog-open.png
+!assets/dagou-bark.mp3
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#e9f4fc">
+  <meta name="description" content="把憋住的汪汪声合成一声大狗叫。">
+  <title>大狗叫 · 合成游戏</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="vendor/matter.min.js"></script>
+  <script defer src="game-rules.js"></script>
+  <script defer src="dog-visuals.js"></script>
+  <script defer src="dog-shape.js"></script>
+  <script defer src="dog-physics.js"></script>
+  <script defer src="dog-feedback.js"></script>
+  <script defer src="game.js"></script>
+</head>
+<body>
+  <div class="sky-scene" aria-hidden="true">
+    <span class="sky-cloud sky-cloud-one"></span>
+    <span class="sky-cloud sky-cloud-two"></span>
+    <span class="sky-cloud sky-cloud-three"></span>
+    <span class="sky-spark sky-spark-one"></span>
+    <span class="sky-spark sky-spark-two"></span>
+  </div>
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="wordmark" href="./" aria-label="大狗叫，返回游戏">大狗叫<span class="wordmark-dot">.</span></a>
+      <div class="header-right">
+        <span class="edition">DOG MERGE <span>·</span> 合成小游戏</span>
+        <button class="header-button" id="sound-button" type="button" aria-pressed="false">音效：开</button>
+        <button class="header-button header-button-primary" id="restart-button" type="button">重新开始</button>
+      </div>
+    </header>
+
+    <main class="game-layout">
+      <section class="status-panel" aria-label="游戏状态">
+        <div class="side-heading">
+          <span class="eyebrow"><span class="eyebrow-line"></span> 蓄势待叫中</span>
+          <h1>合成<em>大狗叫。</em></h1>
+          <p>相同的碰在一起，越合越响。</p>
+        </div>
+        <div class="status-hud">
+          <div class="score-grid" aria-label="分数">
+            <div class="score-card"><span>本局得分</span><strong id="score">0</strong></div>
+            <div class="score-card score-card-best"><span>最高纪录</span><strong id="best-score">0</strong></div>
+          </div>
+          <div class="next-card">
+            <div class="next-copy"><span class="card-kicker">COMING UP</span><h2>下一个</h2><p id="next-label">闭麦</p></div>
+            <div class="next-piece" id="next-piece"><img src="assets/dog-close.png" alt="下一只大狗" id="next-image"><span id="next-number">1</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="board-panel" aria-label="游戏棋盘">
+        <div class="board-heading">
+          <span class="board-index">01 / 落下去</span>
+          <span class="board-rule">同级相碰，越合越大</span>
+        </div>
+        <div class="board-stage" id="board-stage">
+          <div class="danger-notice" id="danger-notice" aria-hidden="true" hidden><span id="danger-label">即将结束</span><strong id="danger-time"></strong></div>
+          <canvas id="game-canvas" width="420" height="680" tabindex="0" role="img" aria-label="大狗叫合成游戏棋盘。鼠标点击或触屏松手投放；方向键移动，空格投放。"></canvas>
+          <div class="board-overlay" id="game-over" hidden>
+            <div class="game-over-card">
+              <span class="over-eyebrow" id="record-status"></span>
+              <h2>本局结束</h2>
+              <p class="over-score-row"><span>本局得分</span><strong id="final-score">0</strong></p>
+              <div class="over-tier"><img id="final-tier-image" alt=""><div><span>最高合成等级</span><strong id="final-tier"></strong></div><b id="final-tier-number"></b></div>
+              <button id="play-again-button" type="button">再来一局</button>
+            </div>
+          </div>
+        </div>
+        <div class="board-bottom">
+          <span class="keyboard-hint">← → 调整位置</span><span class="keyboard-hint">空格投放 · R 重开</span>
+          <span class="touch-hint">按住移动瞄准，松手投放</span>
+        </div>
+      </section>
+
+      <aside class="info-panel" aria-label="等级与玩法说明">
+        <details class="chain-card" id="evolution-panel" open>
+          <summary class="chain-heading"><span class="card-kicker">HOW LOUD CAN IT GET?</span><span class="chain-title">叫声进化</span><span class="chain-toggle" aria-hidden="true"></span></summary>
+          <ol class="tier-list" id="tier-list"></ol>
+          <p class="control-note">电脑：移动鼠标瞄准，点击投放。<br>手机：按住拖动，松手投放。<br>相同数字碰在一起就会合成。<br>堆过红色警戒线且停住，就会结束。</p>
+        </details>
+      </aside>
+    </main>
+    <footer class="site-footer"><span>一只狗，从闭麦到大狗叫。</span><span>DROP · MERGE · BARK</span></footer>
+  </div>
+  <div class="sr-only" id="live-status" role="status" aria-live="polite"></div>
+</body>
+</html>

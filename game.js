@@ -299,6 +299,7 @@
         Body.setVelocity(upgraded, { x: vx, y: vy });
         Body.setAngularVelocity(upgraded, (a.angularVelocity + b.angularVelocity) * 0.25);
         upgraded.gamePopAt = elapsed;
+        dogPhysics.applyMergePulse(pieces, upgraded, elapsed);
         addPoints(((tier + 1) * (tier + 2)) / 2, x, y);
         bark(tier + 1, false);
         liveStatus.textContent = `合成${TIERS[tier + 1].name}，当前 ${score} 分。`;

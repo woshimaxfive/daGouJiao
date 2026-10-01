@@ -29,6 +29,7 @@
       Body.setMass(body, Math.PI * radius * radius * options.density);
       Body.setPosition(body, { x, y });
       body.gameTier = tier;
+      body.gameRadius = radius;
       return body;
     }
 
@@ -84,7 +85,46 @@
       return landed.length > 0;
     }
 
-    return Object.freeze({ createDog, measure, keepInside, parentBody, updateMotion, shakeDogs });
+    function applyMergePulse(pieces, source, now) {
+      const radius = source.gameRadius;
+      const reach = radius * 0.85 + 28;
+      const strength = 4.2 + source.gameTier * 0.5;
+      let affected = 0;
+      for (const body of pieces) {
+        if (body === source || body.isStatic || body.gameTier === undefined) continue;
+        let dx = body.position.x - source.position.x;
+        let dy = body.position.y - source.position.y;
+        let distance = Math.hypot(dx, dy);
+        const gap = Math.max(0, distance - radius - body.gameRadius);
+        if (gap >= reach) continue;
+        if (distance < 0.001) {
+          dx = body.id % 2 ? 1 : -1;
+          dy = -0.3;
+          distance = Math.hypot(dx, dy);
+        }
+        const nx = dx / distance, ny = dy / distance;
+        const weight = Math.max(0.7, Math.min(1.2, Math.sqrt(source.mass / body.mass)));
+        const falloff = (1 - gap / reach) ** 2;
+        // 连锁合成共享短时推力额度，已有的高速运动不额外加速。
+        if (body.gameMergePulseAt === undefined || now - body.gameMergePulseAt >= 150) {
+          body.gameMergePulseAt = now;
+          body.gameMergePulseUsed = 0;
+        }
+        const outwardSpeed = body.velocity.x * nx + body.velocity.y * ny;
+        const kick = Math.max(0, Math.min(strength * weight * falloff,
+          7 - body.gameMergePulseUsed, 9 - outwardSpeed));
+        if (kick < 0.05) continue;
+        body.gameMergePulseUsed += kick;
+        Body.setVelocity(body, {
+          x: body.velocity.x + nx * kick,
+          y: body.velocity.y + (ny - 0.45) * kick,
+        });
+        affected += 1;
+      }
+      return affected;
+    }
+
+    return Object.freeze({ createDog, measure, keepInside, parentBody, updateMotion, shakeDogs, applyMergePulse });
   }
 
   return Object.freeze({ withMatter });

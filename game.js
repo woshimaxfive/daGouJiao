@@ -12,7 +12,8 @@
   const { chooseSpawnTier: pickTier, advanceDanger, dangerNotice, roundResult } = window.DagouRules;
   const WIDTH = 420;
   const HEIGHT = 680;
-  const DANGER_Y = 128;
+  const DANGER_Y = 160;
+  const DOG_SIZE_SCALE = 1.1;
   const DANGER_SECONDS = 1.5;
   const REST_SPEED_PER_SECOND = 140;
   const DROP_COOLDOWN = 380;
@@ -31,7 +32,7 @@
     { name: '大汪', radius: 69, color: '#af5418' },
     { name: '怒吼', radius: 84, color: '#c13c32' },
     { name: '大狗叫', radius: 102, color: '#896210' },
-  ];
+  ].map(tier => ({ ...tier, radius: tier.radius * DOG_SIZE_SCALE }));
   const SPAWN_WEIGHTS = [0.38, 0.30, 0.21, 0.11];
   const tierLayouts = TIERS.map(tier => dogPhysics.measure(tier.radius));
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -39,6 +40,7 @@
   const canvas = document.getElementById('game-canvas');
   const context = canvas.getContext('2d');
   const stage = document.getElementById('board-stage');
+  stage.style.setProperty('--danger-line', `${DANGER_Y / HEIGHT * 100}%`);
   const scoreElement = document.getElementById('score');
   const bestElement = document.getElementById('best-score');
   const nextLabel = document.getElementById('next-label');

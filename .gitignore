@@ -8,6 +8,7 @@ assets/*
 !assets/dog-close.png
 !assets/dog-open.png
 !assets/dog-tier-*.png
+!assets/dog-tier-*.webp
 !assets/dagou-bark.mp3
 __pycache__/
 *.py[cod]

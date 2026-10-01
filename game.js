@@ -72,81 +72,139 @@
   const imageLoading = document.getElementById('image-loading');
   const imageLoadingMessage = document.getElementById('image-loading-message');
   const retryImagesButton = document.getElementById('retry-images-button');
+  const imageStatus = document.getElementById('image-status');
+  const imageStatusMessage = document.getElementById('image-status-message');
+  const refreshImagesButton = document.getElementById('refresh-images-button');
   const tierImages = TIERS.map(() => new Image());
+  const fullImages = TIERS.map(() => null);
+  const previewImages = TIERS.map(() => null);
   const loadedImages = new WeakSet();
+  const STARTER_COUNT = SPAWN_WEIGHTS.length;
+  const START_WAIT_MS = 2500;
   let visualsReady = false;
   let visualsLoading = false;
+  let previewsLoading = null;
+  let starterFallbackAllowed = false;
 
   function readyImage(image) {
-    return image.naturalWidth > 0 && (loadedImages.has(image) || image.complete);
+    return !!image && image.naturalWidth > 0 && loadedImages.has(image);
   }
 
   function tierImage(tier) {
-    return tierImages[tier];
+    return readyImage(fullImages[tier]) ? fullImages[tier] : previewImages[tier];
+  }
+
+  function syncTierImage(tier) {
+    const image = tierImage(tier);
+    if (!readyImage(image)) return;
+    if (tierImages[tier].src !== image.src) tierImages[tier].src = image.src;
+    if (tier === nextTier) nextImage.src = image.src;
+    if (gameOver && result?.maxTier === tier) finalTierImage.src = image.src;
   }
 
   function updateImageProgress() {
-    const count = tierImages.filter(readyImage).length;
-    imageLoadingMessage.textContent = `正在加载狗图（${count}/${TIERS.length}）`;
+    const count = fullImages.filter(readyImage).length;
+    const starters = fullImages.slice(0, STARTER_COUNT).filter(readyImage).length;
+    imageLoadingMessage.textContent = `正在准备狗图（${starters}/${STARTER_COUNT}）`;
+    const starterReady = fullImages.slice(0, STARTER_COUNT).every(readyImage)
+      || (starterFallbackAllowed && Array.from({ length: STARTER_COUNT }, (_, tier) =>
+        readyImage(tierImage(tier))).every(Boolean));
+    if (!visualsReady && starterReady) {
+      visualsReady = true;
+      imageLoading.hidden = true;
+      updateNext();
+      liveStatus.textContent = '狗图准备好了，可以开始投放。';
+    }
+    imageStatus.hidden = !visualsReady || count === TIERS.length;
+    imageStatusMessage.textContent = visualsLoading
+      ? `清晰狗图加载中（${count}/${TIERS.length}）`
+      : '部分狗图暂用缩略图';
+    refreshImagesButton.hidden = visualsLoading || count === TIERS.length;
   }
 
-  async function loadDogImage(image, src) {
-    if (readyImage(image)) return;
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+  async function loadDogImage(src, attempts = 3) {
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      const image = new Image();
       try {
         await new Promise((resolve, reject) => {
+          let settled = false;
           const finish = error => {
+            if (settled) return;
+            settled = true;
             clearTimeout(timer);
             image.removeEventListener('load', loaded);
             image.removeEventListener('error', failed);
-            if (error) reject(error);
-            else resolve();
+            if (error) {
+              image.removeAttribute('src');
+              reject(error);
+            } else resolve();
           };
-          const loaded = () => {
-            if (!image.naturalWidth) { failed(); return; }
-            loadedImages.add(image);
-            updateImageProgress();
-            finish();
+          const loaded = async () => {
+            try {
+              if (!image.naturalWidth) throw new Error('狗图加载失败');
+              if (typeof image.decode === 'function') await image.decode();
+              loadedImages.add(image);
+              finish();
+            } catch (error) { finish(error); }
           };
-          const failed = () => {
-            loadedImages.delete(image);
-            finish(new Error('狗图加载失败'));
-          };
+          const failed = () => finish(new Error('狗图加载失败'));
           const timer = setTimeout(() => finish(new Error('狗图加载超时')), 8000);
           image.addEventListener('load', loaded);
           image.addEventListener('error', failed);
-          image.src = attempt === 0 ? src : `${src}&retry=${Date.now()}-${attempt}`;
-          if (readyImage(image)) loaded();
+          image.src = attempt === 0 ? src
+            : `${src}${src.includes('?') ? '&' : '?'}retry=${Date.now()}-${attempt}`;
         });
-        return;
+        return image;
       } catch (error) {
-        if (attempt === 2) throw error;
+        if (attempt === attempts - 1) throw error;
         await new Promise(resolve => setTimeout(resolve, 400 * (attempt + 1)));
       }
     }
   }
 
+  function loadPreviews() {
+    if (!previewsLoading) {
+      previewsLoading = Promise.allSettled(TIERS.map(async (_, tier) => {
+        previewImages[tier] = await loadDogImage(window.DagouVisuals.previews[tier], 1);
+        syncTierImage(tier);
+        updateImageProgress();
+      }));
+    }
+    return previewsLoading;
+  }
+
+  async function loadTier(tier) {
+    if (readyImage(fullImages[tier])) return;
+    fullImages[tier] = await loadDogImage(window.DagouVisuals.sources[tier]);
+    syncTierImage(tier);
+    updateImageProgress();
+  }
+
   async function loadVisuals() {
-    if (visualsLoading || visualsReady) return;
+    if (visualsLoading || fullImages.every(readyImage)) return;
     visualsLoading = true;
-    imageLoading.hidden = false;
+    imageLoading.hidden = visualsReady;
     retryImagesButton.hidden = true;
     updateImageProgress();
     try {
-      // 棋盘直接使用等级列表中的同一批图片，避免两条加载路径状态不一致。
-      await Promise.allSettled(tierImages.map((image, index) =>
-        loadDogImage(image, window.DagouVisuals.sources[index])));
-      visualsReady = tierImages.every(readyImage);
-      if (visualsReady) {
-        updateNext();
-        imageLoading.hidden = true;
-        liveStatus.textContent = '狗图加载完成，可以开始投放。';
-      } else {
-        imageLoadingMessage.textContent = '有些狗图没有加载成功，请重试。';
-        retryImagesButton.hidden = false;
-      }
+      const previews = loadPreviews();
+      const starters = Promise.allSettled(Array.from({ length: STARTER_COUNT }, (_, tier) => loadTier(tier)));
+      let timer;
+      await Promise.race([starters, new Promise(resolve => { timer = setTimeout(resolve, START_WAIT_MS); })]);
+      clearTimeout(timer);
+      // 慢网下最多等一小会儿，缩略图解码完成后即可投放；高清图继续加载。
+      starterFallbackAllowed = true;
+      await previews;
+      updateImageProgress();
+      await Promise.allSettled([starters, ...TIERS.slice(STARTER_COUNT).map((_, index) =>
+        loadTier(index + STARTER_COUNT))]);
     } finally {
       visualsLoading = false;
+      updateImageProgress();
+      if (!visualsReady) {
+        imageLoadingMessage.textContent = '狗图没有准备成功，请重试。';
+        retryImagesButton.hidden = false;
+      }
     }
   }
 
@@ -366,7 +424,8 @@
     finalDuration.textContent = formatDuration(roundDurationMs);
     displayScore(finalDrops, dropCount);
     finalTier.textContent = `${result.maxLevel} 级 · ${TIERS[result.maxTier].name}`;
-    finalTierImage.src = tierImage(result.maxTier).src;
+    const resultImage = tierImage(result.maxTier);
+    if (readyImage(resultImage)) finalTierImage.src = resultImage.src;
     finalTierImage.alt = '';
     finalTierNumber.textContent = result.maxLevel;
     recordStatus.textContent = result.isNewRecord ? '刷新最高纪录！' : '下一局继续挑战';
@@ -471,7 +530,8 @@
   function updateNext() {
     nextLabel.textContent = TIERS[nextTier].name;
     nextNumber.textContent = String(nextTier + 1);
-    if (tierImage(nextTier).src) nextImage.src = tierImage(nextTier).src;
+    const image = tierImage(nextTier);
+    if (readyImage(image)) nextImage.src = image.src;
     nextImage.alt = `下一只：${nextTier + 1} 级${TIERS[nextTier].name}`;
     nextPiece.style.setProperty('--tier-color', TIERS[nextTier].color);
     canvas.setAttribute('aria-label', `大狗叫合成游戏棋盘。当前待投：${currentTier + 1} 级${TIERS[currentTier].name}；下一只：${nextTier + 1} 级${TIERS[nextTier].name}。鼠标点击或触屏松手投放；方向键移动，空格投放。`);
@@ -731,6 +791,7 @@
 
   function drawDog(x, y, tier, angle, sprite, pop = 1, squash = 0, squashAngle = 0) {
     const image = tierImage(tier);
+    if (!readyImage(image)) return;
     context.save();
     context.translate(x, y);
     if (Math.abs(squash) > 0.0001) {
@@ -926,6 +987,7 @@
     else if (dropCount > 0 && !gameOver && roundStartedAt === null) roundStartedAt = performance.now();
   });
   retryImagesButton.addEventListener('click', loadVisuals);
+  refreshImagesButton.addEventListener('click', loadVisuals);
   function syncEvolutionLayout() { evolutionPanel.open = !mobileLayout.matches; }
   mobileLayout.addEventListener('change', syncEvolutionLayout);
   syncEvolutionLayout();

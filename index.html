@@ -7,15 +7,15 @@
   <meta name="description" content="把憋住的汪汪声合成一声大狗叫。">
   <title>合成大狗叫</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="style.css?v=15">
+  <link rel="stylesheet" href="style.css?v=16">
   <script defer src="vendor/matter.min.js"></script>
   <script defer src="game-rules.js"></script>
-  <script defer src="dog-visuals.js?v=13"></script>
+  <script defer src="dog-visuals.js?v=16"></script>
   <script defer src="dog-shape.js"></script>
   <script defer src="dog-physics.js?v=13"></script>
   <script defer src="dog-feedback.js"></script>
   <script defer src="dog-motion.js?v=15"></script>
-  <script defer src="game.js?v=15"></script>
+  <script defer src="game.js?v=16"></script>
 </head>
 <body>
   <div class="sky-scene" aria-hidden="true">
@@ -65,7 +65,7 @@
           <div class="board-overlay" id="image-loading" role="status">
             <div class="game-over-card">
               <h2>狗狗准备中</h2>
-              <p id="image-loading-message">正在加载狗图（0/10）</p>
+              <p id="image-loading-message">正在准备狗图（0/4）</p>
               <button id="retry-images-button" type="button" hidden>重新加载图片</button>
             </div>
           </div>
@@ -87,6 +87,7 @@
           <span class="keyboard-hint">← → 调整位置</span><span class="keyboard-hint">空格投放 · R 重开</span>
           <span class="touch-hint">按住移动瞄准，松手投放</span>
         </div>
+        <div class="image-status" id="image-status" hidden><span id="image-status-message" role="status"></span><button id="refresh-images-button" type="button" hidden>重试清晰图</button></div>
         <div class="motion-controls" id="motion-controls" hidden>
           <button id="motion-button" type="button" aria-pressed="false" aria-describedby="motion-status">重力：关</button>
           <span id="motion-status" role="status" aria-live="polite">开启后左右倾斜，也可摇一摇</span>

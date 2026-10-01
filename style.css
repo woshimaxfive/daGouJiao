@@ -244,3 +244,7 @@ button:focus-visible, a:focus-visible, canvas:focus-visible, summary:focus-visib
 #image-loading { background: rgba(224, 240, 250, .9); }
 #image-loading-message { color: var(--muted); font-size: 14px; line-height: 1.6; }
 #retry-images-button[hidden] { display: none; }
+
+.image-status[hidden], .image-status button[hidden] { display: none; }
+.image-status { display: flex; justify-content: center; align-items: center; gap: 8px; margin: 3px 5px; color: var(--muted); font-size: 11px; }
+.image-status button { min-height: 32px; padding: 0 7px; border: 1px solid var(--line); border-radius: 6px; background: var(--white); color: var(--ink); font-size: 11px; cursor: pointer; }

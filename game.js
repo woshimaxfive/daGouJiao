@@ -19,6 +19,9 @@
   const STEP = 1000 / 60;
   const SUBSTEPS = 3;
   const FINALE_AUDIO_PATH = 'assets/dagou-bark.mp3';
+  const FINALE_VOLUME = 0.5;
+  const FINALE_FADE_IN = 0.15;
+  const FINALE_FADE_OUT = 0.2;
   const TIERS = [
     { name: '闭麦', radius: 21, color: '#526879' },
     { name: '蓄力', radius: 28, color: '#167c80' },
@@ -163,6 +166,7 @@
   let audioContext;
   let finaleAudioLoad;
   let finaleSource;
+  let finaleGain;
   let finalePlaybackId = 0;
   let celebrationUntil = 0;
   let shakeUntil = 0;
@@ -481,6 +485,10 @@
       finaleSource.disconnect();
       finaleSource = null;
     }
+    if (finaleGain) {
+      finaleGain.disconnect();
+      finaleGain = null;
+    }
   }
 
   async function playFinaleAudio(tier) {
@@ -495,14 +503,27 @@
       if (audio.state === 'suspended') await audio.resume();
       if (muted || playbackId !== finalePlaybackId) return;
       const source = audio.createBufferSource();
+      const gain = audio.createGain();
+      const start = audio.currentTime;
+      const end = start + buffer.duration;
       source.buffer = buffer;
-      source.connect(audio.destination);
+      // 保留原录音，以较低音量平滑起落，避免突然响起。
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(FINALE_VOLUME,
+        start + Math.min(FINALE_FADE_IN, buffer.duration / 2));
+      gain.gain.setValueAtTime(FINALE_VOLUME,
+        end - Math.min(FINALE_FADE_OUT, buffer.duration / 2));
+      gain.gain.linearRampToValueAtTime(0, end);
+      source.connect(gain).connect(audio.destination);
       source.onended = () => {
         source.disconnect();
+        gain.disconnect();
         if (finaleSource === source) finaleSource = null;
+        if (finaleGain === gain) finaleGain = null;
       };
       finaleSource = source;
-      source.start();
+      finaleGain = gain;
+      source.start(start);
     } catch {
       if (muted || playbackId !== finalePlaybackId) return;
       synthBark(tier, true);

@@ -7,15 +7,15 @@
   <meta name="description" content="把憋住的汪汪声合成一声大狗叫。">
   <title>合成大狗叫</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="style.css?v=10">
+  <link rel="stylesheet" href="style.css?v=11">
   <script defer src="vendor/matter.min.js"></script>
   <script defer src="game-rules.js"></script>
   <script defer src="dog-visuals.js?v=4"></script>
   <script defer src="dog-shape.js"></script>
-  <script defer src="dog-physics.js"></script>
+  <script defer src="dog-physics.js?v=11"></script>
   <script defer src="dog-feedback.js"></script>
-  <script defer src="dog-motion.js?v=10"></script>
-  <script defer src="game.js?v=10"></script>
+  <script defer src="dog-motion.js?v=11"></script>
+  <script defer src="game.js?v=11"></script>
 </head>
 <body>
   <div class="sky-scene" aria-hidden="true">
@@ -88,8 +88,8 @@
           <span class="touch-hint">按住移动瞄准，松手投放</span>
         </div>
         <div class="motion-controls" id="motion-controls" hidden>
-          <button id="motion-button" type="button" aria-pressed="false" aria-describedby="motion-status">摇一摇：关</button>
-          <span id="motion-status" role="status" aria-live="polite">开启后轻摇手机，晃动狗堆</span>
+          <button id="motion-button" type="button" aria-pressed="false" aria-describedby="motion-status">重力：关</button>
+          <span id="motion-status" role="status" aria-live="polite">开启后左右倾斜，也可摇一摇</span>
         </div>
       </section>
 

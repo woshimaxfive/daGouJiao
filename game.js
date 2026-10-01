@@ -438,36 +438,27 @@
     motionControls.hidden = !state.eligible;
     motionButton.disabled = !state.supported;
     motionButton.setAttribute('aria-pressed', String(state.enabled));
-    motionButton.textContent = state.enabled ? '摇一摇：开' : '摇一摇：关';
+    motionButton.textContent = state.enabled ? '重力：开' : '重力：关';
     const messages = {
-      off: '开启后轻摇手机，晃动狗堆',
-      unsupported: '当前浏览器不支持摇一摇',
+      off: '开启后左右倾斜，也可摇一摇',
+      unsupported: '当前浏览器不支持重力感应',
       requesting: '请允许手机运动感应',
       checking: '连接感应中，轻动一下手机',
       denied: '未获感应权限，点击可重试',
       unavailable: '未收到感应数据，点击可重试',
     };
     if (state.phase === 'active') {
-      motionStatus.textContent = gameOver ? '本局已结束，重开后可摇'
-        : state.cooldown > 0 ? `冷却中 ${state.cooldown} 秒`
-          : '轻摇手机，晃动狗堆';
+      const tiltLabel = !state.tiltReady ? '倾斜数据不可用'
+        : state.tilt < -0.15 ? '重力向左' : state.tilt > 0.15 ? '重力向右' : '左右倾斜，移动狗堆';
+      motionStatus.textContent = gameOver ? '本局已结束，重开后可用'
+        : `${tiltLabel} · ${state.cooldown > 0 ? `摇动冷却 ${state.cooldown} 秒` : '可摇一摇'}`;
     } else {
       motionStatus.textContent = messages[state.phase];
     }
   }
 
   function shakeDogs(direction) {
-    const landed = pieces.filter(body => body.gameLanded && !body.isStatic);
-    if (!landed.length) return false;
-    for (const body of landed) {
-      // 固定轻推幅度，所有等级使用同样的速度上限。
-      Body.setVelocity(body, {
-        x: Math.max(-4, Math.min(4, body.velocity.x + direction * 2.8)),
-        y: Math.max(-2.2, Math.min(0, body.velocity.y) - 1.4),
-      });
-      Body.setAngularVelocity(body,
-        Math.max(-0.045, Math.min(0.045, body.angularVelocity + direction * 0.018)));
-    }
+    if (!dogPhysics.shakeDogs(pieces, direction)) return false;
     shakeUntil = Math.max(shakeUntil, elapsed + 160);
     liveStatus.textContent = '摇一摇！狗堆晃动了。';
     return true;
@@ -849,6 +840,9 @@
     const frameDelta = previousFrame ? Math.min(50, now - previousFrame) : STEP;
     previousFrame = now;
     elapsed += frameDelta;
+    const motionState = motion?.getState();
+    dogPhysics.updateMotion(engine, pieces,
+      !gameOver && !document.hidden && motionState?.phase === 'active', motionState?.tilt || 0, frameDelta);
     if (!gameOver) {
       let steps = 0;
       physicsAccumulator += frameDelta;

@@ -52,7 +52,39 @@
     // 同一只狗可能由多个子圆同时接触，等级、去重和警戒计时只记在父体。
     function parentBody(part) { return part.parent || part; }
 
-    return Object.freeze({ createDog, measure, keepInside, parentBody });
+    function updateMotion(engine, pieces, enabled, tilt, deltaMs) {
+      const targetGravity = Math.max(-1, Math.min(1, tilt)) * 3.2;
+      engine.gravity.x = enabled
+        ? engine.gravity.x + (targetGravity - engine.gravity.x) * (1 - Math.exp(-deltaMs / 100)) : 0;
+      for (const body of pieces) {
+        if (enabled && !body.gameMotionFriction) {
+          body.gameMotionFriction = body.parts.map(part => [part, part.friction, part.frictionStatic]);
+          for (const part of body.parts) { part.friction = 0.03; part.frictionStatic = 0.08; }
+        } else if (!enabled && body.gameMotionFriction) {
+          for (const [part, friction, frictionStatic] of body.gameMotionFriction) {
+            part.friction = friction;
+            part.frictionStatic = frictionStatic;
+          }
+          delete body.gameMotionFriction;
+        }
+      }
+    }
+
+    function shakeDogs(pieces, direction) {
+      const landed = pieces.filter(body => body.gameLanded && !body.isStatic);
+      for (const body of landed) {
+        // 先弹开接触面再横移，密集狗堆也能获得一次明显的挪动。
+        Body.setVelocity(body, {
+          x: Math.max(-12, Math.min(12, body.velocity.x * 0.35 + direction * 9)),
+          y: Math.max(-9, Math.min(-6.5, body.velocity.y - 6.5)),
+        });
+        Body.setAngularVelocity(body,
+          Math.max(-0.12, Math.min(0.12, body.angularVelocity + direction * 0.07)));
+      }
+      return landed.length > 0;
+    }
+
+    return Object.freeze({ createDog, measure, keepInside, parentBody, updateMotion, shakeDogs });
   }
 
   return Object.freeze({ withMatter });

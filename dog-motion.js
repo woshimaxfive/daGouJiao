@@ -58,11 +58,11 @@
       }
       const magnitude = Math.hypot(acceleration.x, acceleration.y, acceleration.z);
       if (peak && now - peak.at > 600) peak = null;
-      if (magnitude < 8) return { valid: true, direction: 0 };
+      if (magnitude < 6) return { valid: true, direction: 0 };
       if (peak) {
         const dot = acceleration.x * peak.vector.x + acceleration.y * peak.vector.y
           + acceleration.z * peak.vector.z;
-        if (now - peak.at >= 70 && dot < -0.25 * magnitude * peak.magnitude) {
+        if (now - peak.at >= 60 && dot < -0.25 * magnitude * peak.magnitude) {
           peak = null;
           return { valid: true, direction: acceleration.x >= 0 ? 1 : -1 };
         }
@@ -75,8 +75,49 @@
     return Object.freeze({ sample, reset });
   }
 
+  function createTilt() {
+    let gravity = null;
+    let lastAt = null;
+    let strength = 0;
+    function reset() { gravity = null; lastAt = null; strength = 0; }
+    function sample(event, now, angle = 0) {
+      const total = vector(event.accelerationIncludingGravity);
+      if (!total) return;
+      const linear = vector(event.acceleration);
+      // 摇动时不把瞬时加速度当成倾斜，避免重力方向突然跳变。
+      if (linear && Math.hypot(linear.x, linear.y, linear.z) > 4) return;
+      const reading = linear ? {
+        x: total.x - linear.x, y: total.y - linear.y, z: total.z - linear.z,
+      } : total;
+      const length = Math.hypot(reading.x, reading.y, reading.z);
+      if (length < 6 || length > 13) return;
+      const alpha = lastAt === null || now - lastAt > 600 ? 1
+        : 1 - Math.exp(-Math.max(1, now - lastAt) / 120);
+      gravity = gravity ? {
+        x: gravity.x + (reading.x - gravity.x) * alpha,
+        y: gravity.y + (reading.y - gravity.y) * alpha,
+        z: gravity.z + (reading.z - gravity.z) * alpha,
+      } : reading;
+      lastAt = now;
+      const radians = angle * Math.PI / 180;
+      const screenX = gravity.x * Math.cos(radians) - gravity.y * Math.sin(radians);
+      const screenY = gravity.x * Math.sin(radians) + gravity.y * Math.cos(radians);
+      // 各浏览器可能提供相反符号，以朝上的分量统一方向。
+      const polarity = Math.sign(Math.abs(screenY) > 3 ? screenY : gravity.z) || 1;
+      const side = -screenX * polarity / Math.hypot(gravity.x, gravity.y, gravity.z);
+      const magnitude = Math.max(0, Math.abs(side) - 0.08) / 0.47;
+      strength = magnitude > 0 ? Math.sign(side) * Math.min(1, magnitude) : 0;
+    }
+    function get(now) {
+      const ready = lastAt !== null && now - lastAt < 600;
+      return { ready, strength: ready ? strength : 0 };
+    }
+    return Object.freeze({ sample, reset, get });
+  }
+
   function create({ target, canShake, onShake, onState }) {
     const detector = createDetector();
+    const tilt = createTilt();
     const eligible = target.navigator.maxTouchPoints > 0
       && target.matchMedia('(pointer: coarse)').matches;
     const supported = eligible && target.isSecureContext && !!target.DeviceMotionEvent;
@@ -91,16 +132,19 @@
     const now = () => target.performance.now();
     function getState() {
       const cooldown = Math.ceil(Math.max(0, nextShakeAt - now()) / 1000);
+      const reading = tilt.get(now());
       return {
         eligible, supported, phase,
         enabled: phase === 'checking' || phase === 'active' || phase === 'requesting',
         cooldown: phase === 'active' ? cooldown : 0,
+        tilt: phase === 'active' && !target.document.hidden ? reading.strength : 0,
+        tiltReady: reading.ready,
       };
     }
 
     function refresh(force = false) {
       const state = getState();
-      const key = `${state.phase}:${state.cooldown}`;
+      const key = `${state.phase}:${state.cooldown}:${state.tiltReady}:${Math.round(state.tilt * 4)}`;
       if (force || key !== stateKey) {
         stateKey = key;
         onState(state);
@@ -115,6 +159,7 @@
       if (timer !== null) target.clearInterval(timer);
       timer = null;
       detector.reset();
+      tilt.reset();
     }
 
     function disable(nextPhase = 'off') {
@@ -131,6 +176,7 @@
       if (!result.valid) return;
       lastSignalAt = time;
       phase = 'active';
+      tilt.sample(event, time, target.screen?.orientation?.angle ?? target.orientation ?? 0);
       if (result.direction && time >= nextShakeAt && canShake()) {
         if (onShake(result.direction)) {
           nextShakeAt = time + COOLDOWN_MS;
@@ -155,6 +201,7 @@
         }
         if (request !== generation) return;
         detector.reset();
+        tilt.reset();
         lastSignalAt = now();
         phase = 'checking';
         target.addEventListener('devicemotion', handleMotion);
@@ -172,12 +219,14 @@
 
     function resetRound() {
       detector.reset();
+      tilt.reset();
       nextShakeAt = 0;
       refresh(true);
     }
 
     target.document.addEventListener('visibilitychange', () => {
       detector.reset();
+      tilt.reset();
       if (!target.document.hidden && listenerAttached) {
         lastSignalAt = now();
         phase = 'checking';
@@ -192,5 +241,5 @@
     });
   }
 
-  return Object.freeze({ create, createDetector });
+  return Object.freeze({ create, createDetector, createTilt });
 });

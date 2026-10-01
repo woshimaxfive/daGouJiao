@@ -7,14 +7,15 @@
   <meta name="description" content="把憋住的汪汪声合成一声大狗叫。">
   <title>合成大狗叫</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="style.css?v=8">
+  <link rel="stylesheet" href="style.css?v=10">
   <script defer src="vendor/matter.min.js"></script>
   <script defer src="game-rules.js"></script>
   <script defer src="dog-visuals.js?v=4"></script>
   <script defer src="dog-shape.js"></script>
   <script defer src="dog-physics.js"></script>
   <script defer src="dog-feedback.js"></script>
-  <script defer src="game.js?v=8"></script>
+  <script defer src="dog-motion.js?v=10"></script>
+  <script defer src="game.js?v=10"></script>
 </head>
 <body>
   <div class="sky-scene" aria-hidden="true">
@@ -26,7 +27,7 @@
   </div>
   <div class="page-shell">
     <header class="site-header">
-      <a class="wordmark" href="./" aria-label="合成大狗叫，返回游戏">合成大狗叫<span class="wordmark-dot">.</span></a>
+      <a class="wordmark" href="./" aria-label="合成大狗叫，返回游戏">合成大狗叫</a>
       <div class="header-right">
         <span class="edition">DOG MERGE <span>·</span> 合成小游戏</span>
         <button class="header-button" id="sound-button" type="button" aria-pressed="false">音效：开</button>
@@ -85,6 +86,10 @@
         <div class="board-bottom">
           <span class="keyboard-hint">← → 调整位置</span><span class="keyboard-hint">空格投放 · R 重开</span>
           <span class="touch-hint">按住移动瞄准，松手投放</span>
+        </div>
+        <div class="motion-controls" id="motion-controls" hidden>
+          <button id="motion-button" type="button" aria-pressed="false" aria-describedby="motion-status">摇一摇：关</button>
+          <span id="motion-status" role="status" aria-live="polite">开启后轻摇手机，晃动狗堆</span>
         </div>
       </section>
 

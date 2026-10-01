@@ -51,6 +51,9 @@
   const evolutionPanel = document.getElementById('evolution-panel');
   const mobileLayout = window.matchMedia('(max-width: 850px)');
   const soundButton = document.getElementById('sound-button');
+  const motionControls = document.getElementById('motion-controls');
+  const motionButton = document.getElementById('motion-button');
+  const motionStatus = document.getElementById('motion-status');
   const overElement = document.getElementById('game-over');
   const finalScore = document.getElementById('final-score');
   const finalDuration = document.getElementById('final-duration');
@@ -178,6 +181,7 @@
   let celebrationUntil = 0;
   let shakeUntil = 0;
   let warningProgress = 0;
+  let motion;
 
   function readString(key) {
     try { return localStorage.getItem(key); } catch { return null; }
@@ -352,6 +356,7 @@
     if (gameOver) return;
     recordRoundTime();
     gameOver = true;
+    motion?.refresh(true);
     touchAiming = false;
     result = roundResult(score, bestAtStart, maxReached);
     displayScore(finalScore, result.score);
@@ -426,6 +431,46 @@
     updateTierList();
     liveStatus.textContent = '新的一局开始了。';
     canvas.focus({ preventScroll: true });
+    motion?.resetRound();
+  }
+
+  function updateMotionUI(state) {
+    motionControls.hidden = !state.eligible;
+    motionButton.disabled = !state.supported;
+    motionButton.setAttribute('aria-pressed', String(state.enabled));
+    motionButton.textContent = state.enabled ? '摇一摇：开' : '摇一摇：关';
+    const messages = {
+      off: '开启后轻摇手机，晃动狗堆',
+      unsupported: '当前浏览器不支持摇一摇',
+      requesting: '请允许手机运动感应',
+      checking: '连接感应中，轻动一下手机',
+      denied: '未获感应权限，点击可重试',
+      unavailable: '未收到感应数据，点击可重试',
+    };
+    if (state.phase === 'active') {
+      motionStatus.textContent = gameOver ? '本局已结束，重开后可摇'
+        : state.cooldown > 0 ? `冷却中 ${state.cooldown} 秒`
+          : '轻摇手机，晃动狗堆';
+    } else {
+      motionStatus.textContent = messages[state.phase];
+    }
+  }
+
+  function shakeDogs(direction) {
+    const landed = pieces.filter(body => body.gameLanded && !body.isStatic);
+    if (!landed.length) return false;
+    for (const body of landed) {
+      // 固定轻推幅度，所有等级使用同样的速度上限。
+      Body.setVelocity(body, {
+        x: Math.max(-4, Math.min(4, body.velocity.x + direction * 2.8)),
+        y: Math.max(-2.2, Math.min(0, body.velocity.y) - 1.4),
+      });
+      Body.setAngularVelocity(body,
+        Math.max(-0.045, Math.min(0.045, body.angularVelocity + direction * 0.018)));
+    }
+    shakeUntil = Math.max(shakeUntil, elapsed + 160);
+    liveStatus.textContent = '摇一摇！狗堆晃动了。';
+    return true;
   }
 
   function updateNext() {
@@ -867,6 +912,14 @@
   document.getElementById('restart-button').addEventListener('click', reset);
   document.getElementById('play-again-button').addEventListener('click', reset);
   soundButton.addEventListener('click', toggleSound);
+  motion = window.DagouMotion.create({
+    target: window,
+    canShake: () => !gameOver && visualsReady && !touchAiming,
+    onShake: shakeDogs,
+    onState: updateMotionUI,
+  });
+  motionButton.addEventListener('click', () => motion.toggle());
+  motion.refresh(true);
   window.addEventListener('resize', resizeCanvas);
   window.addEventListener('online', loadVisuals);
   document.addEventListener('visibilitychange', () => {

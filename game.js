@@ -53,6 +53,8 @@
   const soundButton = document.getElementById('sound-button');
   const overElement = document.getElementById('game-over');
   const finalScore = document.getElementById('final-score');
+  const finalDuration = document.getElementById('final-duration');
+  const finalDrops = document.getElementById('final-drops');
   const finalTier = document.getElementById('final-tier');
   const finalTierImage = document.getElementById('final-tier-image');
   const finalTierNumber = document.getElementById('final-tier-number');
@@ -150,6 +152,9 @@
   let particles = [];
   let floatingTexts = [];
   let score = 0;
+  let dropCount = 0;
+  let roundDurationMs = 0;
+  let roundStartedAt = null;
   let best = readNumber('dagou.best');
   let bestAtStart = best;
   let result = null;
@@ -332,12 +337,26 @@
     }
   }
 
+  function recordRoundTime() {
+    if (roundStartedAt === null) return;
+    roundDurationMs += performance.now() - roundStartedAt;
+    roundStartedAt = null;
+  }
+
+  function formatDuration(milliseconds) {
+    const seconds = Math.floor(milliseconds / 1000);
+    return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+  }
+
   function endGame() {
     if (gameOver) return;
+    recordRoundTime();
     gameOver = true;
     touchAiming = false;
     result = roundResult(score, bestAtStart, maxReached);
     displayScore(finalScore, result.score);
+    finalDuration.textContent = formatDuration(roundDurationMs);
+    displayScore(finalDrops, dropCount);
     finalTier.textContent = `${result.maxLevel} 级 · ${TIERS[result.maxTier].name}`;
     finalTierImage.src = tierImage(result.maxTier).src;
     finalTierImage.alt = '';
@@ -348,7 +367,7 @@
     updateDangerNotice({ phase: 'hidden', remaining: 0 }, false);
     overElement.hidden = false;
     document.getElementById('play-again-button').focus({ preventScroll: true });
-    liveStatus.textContent = `游戏结束，本局 ${score} 分，最高 ${result.maxLevel} 级${TIERS[result.maxTier].name}。${result.isNewRecord ? '刷新最高纪录！' : ''}`;
+    liveStatus.textContent = `游戏结束，本局 ${score} 分，时长 ${finalDuration.textContent}，投放 ${dropCount} 次，最高 ${result.maxLevel} 级${TIERS[result.maxTier].name}。${result.isNewRecord ? '刷新最高纪录！' : ''}`;
   }
 
   function reset() {
@@ -374,6 +393,9 @@
     particles = [];
     floatingTexts = [];
     score = 0;
+    dropCount = 0;
+    roundDurationMs = 0;
+    roundStartedAt = null;
     bestAtStart = best;
     result = null;
     maxReached = 0;
@@ -390,6 +412,8 @@
     updateDangerNotice({ phase: 'hidden', remaining: 0 }, false);
     overElement.hidden = true;
     displayScore(finalScore, 0);
+    finalDuration.textContent = '00:00';
+    displayScore(finalDrops, 0);
     finalTier.textContent = '';
     finalTierNumber.textContent = '';
     finalTierImage.removeAttribute('src');
@@ -442,6 +466,9 @@
     if (!visualsReady || gameOver || elapsed - lastDropAt < DROP_COOLDOWN) return false;
     const piece = makePiece(clampAim(aimX), 65, currentTier);
     Body.setVelocity(piece, { x: 0, y: 0.5 });
+    // 从首次成功投放开始计时，合成生成的狗不计入投放次数。
+    if (dropCount === 0 && !document.hidden) roundStartedAt = performance.now();
+    dropCount += 1;
     lastDropAt = elapsed;
     playDrop();
     currentTier = nextTier;
@@ -842,6 +869,11 @@
   soundButton.addEventListener('click', toggleSound);
   window.addEventListener('resize', resizeCanvas);
   window.addEventListener('online', loadVisuals);
+  document.addEventListener('visibilitychange', () => {
+    // 切到后台时暂停统计，返回当前这一局后继续。
+    if (document.hidden) recordRoundTime();
+    else if (dropCount > 0 && !gameOver && roundStartedAt === null) roundStartedAt = performance.now();
+  });
   retryImagesButton.addEventListener('click', loadVisuals);
   function syncEvolutionLayout() { evolutionPanel.open = !mobileLayout.matches; }
   mobileLayout.addEventListener('change', syncEvolutionLayout);

@@ -7,14 +7,14 @@
   <meta name="description" content="把憋住的汪汪声合成一声大狗叫。">
   <title>合成大狗叫</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="style.css?v=7">
+  <link rel="stylesheet" href="style.css?v=8">
   <script defer src="vendor/matter.min.js"></script>
   <script defer src="game-rules.js"></script>
   <script defer src="dog-visuals.js?v=4"></script>
   <script defer src="dog-shape.js"></script>
   <script defer src="dog-physics.js"></script>
   <script defer src="dog-feedback.js"></script>
-  <script defer src="game.js?v=7"></script>
+  <script defer src="game.js?v=8"></script>
 </head>
 <body>
   <div class="sky-scene" aria-hidden="true">
@@ -73,6 +73,10 @@
               <span class="over-eyebrow" id="record-status"></span>
               <h2>本局结束</h2>
               <p class="over-score-row"><span>本局得分</span><strong id="final-score">0</strong></p>
+              <dl class="round-stats">
+                <div><dt>本局时长</dt><dd id="final-duration">00:00</dd></div>
+                <div><dt>投放次数</dt><dd id="final-drops">0</dd></div>
+              </dl>
               <div class="over-tier"><img id="final-tier-image" alt=""><div><span>最高合成等级</span><strong id="final-tier"></strong></div><b id="final-tier-number"></b></div>
               <button id="play-again-button" type="button">再来一局</button>
             </div>

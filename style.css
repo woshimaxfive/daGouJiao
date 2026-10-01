@@ -126,6 +126,10 @@ button:focus-visible, a:focus-visible, canvas:focus-visible, summary:focus-visib
 .over-score-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 14px; color: var(--muted); font-size: 12px; }
 .over-score-row strong { color: var(--ink); font-size: clamp(18px, calc(60px - var(--score-digits, 1) * 3px), 36px); line-height: 1.2; font-variant-numeric: tabular-nums; }
 .over-tier { display: flex; align-items: center; gap: 8px; padding: 6px 8px; margin-bottom: 18px; border: 1px solid var(--line); border-radius: 8px; background: #f0f7fc; text-align: left; }
+.round-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 0 14px; text-align: left; }
+.round-stats div { min-width: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: #f0f7fc; }
+.round-stats dt { color: var(--muted); font-size: 11px; }
+.round-stats dd { margin: 5px 0 0; color: var(--ink); font-size: 20px; font-weight: 900; line-height: 1.2; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .over-tier img { width: 40px; height: 44px; object-fit: contain; }
 .over-tier div { flex: 1; min-width: 0; }
 .over-tier div span { display: block; color: var(--muted); font-size: 10px; }
@@ -220,6 +224,10 @@ button:focus-visible, a:focus-visible, canvas:focus-visible, summary:focus-visib
   .over-eyebrow { font-size: 10px; letter-spacing: .02em; }
   .over-score-row { margin-bottom: 10px; font-size: 10px; }
   .over-score-row strong { font-size: clamp(12px, calc(39px - var(--score-digits, 1) * 3px), 27px); }
+  .round-stats { gap: 5px; margin-bottom: 10px; }
+  .round-stats div { padding: 5px 7px; }
+  .round-stats dt { font-size: 10px; }
+  .round-stats dd { margin-top: 3px; font-size: 16px; }
   .over-tier { gap: 5px; padding: 4px; margin-bottom: 12px; }
   .over-tier img { width: 28px; height: 32px; }
   .over-tier div strong { font-size: 11px; }

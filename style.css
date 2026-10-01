@@ -227,3 +227,7 @@ button:focus-visible, a:focus-visible, canvas:focus-visible, summary:focus-visib
   .over-tier b { width: 20px; height: 22px; }
   .game-over-card button { min-height: 44px; }
 }
+
+#image-loading { background: rgba(224, 240, 250, .9); }
+#image-loading-message { color: var(--muted); font-size: 14px; line-height: 1.6; }
+#retry-images-button[hidden] { display: none; }

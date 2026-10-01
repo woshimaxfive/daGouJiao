@@ -7,14 +7,14 @@
   <meta name="description" content="把憋住的汪汪声合成一声大狗叫。">
   <title>大狗叫 · 合成游戏</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=4">
   <script defer src="vendor/matter.min.js"></script>
   <script defer src="game-rules.js"></script>
-  <script defer src="dog-visuals.js"></script>
+  <script defer src="dog-visuals.js?v=4"></script>
   <script defer src="dog-shape.js"></script>
   <script defer src="dog-physics.js"></script>
   <script defer src="dog-feedback.js"></script>
-  <script defer src="game.js?v=3"></script>
+  <script defer src="game.js?v=4"></script>
 </head>
 <body>
   <div class="sky-scene" aria-hidden="true">
@@ -48,7 +48,7 @@
           </div>
           <div class="next-card">
             <div class="next-copy"><span class="card-kicker">COMING UP</span><h2>下一个</h2><p id="next-label">闭麦</p></div>
-            <div class="next-piece" id="next-piece"><img src="assets/dog-close.png" alt="下一只大狗" id="next-image"><span id="next-number">1</span></div>
+            <div class="next-piece" id="next-piece"><img alt="下一只大狗" id="next-image"><span id="next-number">1</span></div>
           </div>
         </div>
       </section>
@@ -61,6 +61,13 @@
         <div class="board-stage" id="board-stage">
           <div class="danger-notice" id="danger-notice" aria-hidden="true" hidden><span id="danger-label">即将结束</span><strong id="danger-time"></strong></div>
           <canvas id="game-canvas" width="420" height="680" tabindex="0" role="img" aria-label="大狗叫合成游戏棋盘。鼠标点击或触屏松手投放；方向键移动，空格投放。"></canvas>
+          <div class="board-overlay" id="image-loading" role="status">
+            <div class="game-over-card">
+              <h2>狗狗准备中</h2>
+              <p id="image-loading-message">正在加载狗图（0/8）</p>
+              <button id="retry-images-button" type="button" hidden>重新加载图片</button>
+            </div>
+          </div>
           <div class="board-overlay" id="game-over" hidden>
             <div class="game-over-card">
               <span class="over-eyebrow" id="record-status"></span>

@@ -27,11 +27,13 @@
     { name: '闭麦', radius: 21, color: '#526879' },
     { name: '蓄力', radius: 28, color: '#167c80' },
     { name: '呜', radius: 36, color: '#3569bd' },
-    { name: '小汪', radius: 45, color: '#8053b6' },
-    { name: '汪汪', radius: 56, color: '#b44378' },
-    { name: '大汪', radius: 69, color: '#af5418' },
-    { name: '怒吼', radius: 84, color: '#c13c32' },
-    { name: '大狗叫', radius: 102, color: '#896210' },
+    { name: '小汪', radius: 44, color: '#8053b6' },
+    { name: '汪汪', radius: 53, color: '#258fac' },
+    { name: '大汪', radius: 64, color: '#b44378' },
+    { name: '狂汪', radius: 77, color: '#af5418' },
+    { name: '怒吼', radius: 92, color: '#c13c32' },
+    { name: '咆哮', radius: 109, color: '#df7831' },
+    { name: '大狗叫', radius: 128, color: '#896210' },
   ].map(tier => ({ ...tier, radius: tier.radius * DOG_SIZE_SCALE }));
   const SPAWN_WEIGHTS = [0.38, 0.30, 0.21, 0.11];
   const tierLayouts = TIERS.map(tier => dogPhysics.measure(tier.radius));
@@ -85,7 +87,7 @@
 
   function updateImageProgress() {
     const count = tierImages.filter(readyImage).length;
-    imageLoadingMessage.textContent = `正在加载狗图（${count}/8）`;
+    imageLoadingMessage.textContent = `正在加载狗图（${count}/${TIERS.length}）`;
   }
 
   async function loadDogImage(image, src) {

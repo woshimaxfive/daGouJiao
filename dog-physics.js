@@ -12,7 +12,7 @@
         shape.visibleBounds[3] - shape.visibleBounds[1]);
       const scale = radius * 2 / longest;
       const options = {
-        restitution: 0.32 - Math.max(0, Math.min(7, tier)) * 0.012,
+        restitution: 0.32 - Math.max(0, Math.min(9, tier)) * 0.012,
         friction: 0.42, frictionStatic: 0.65,
         frictionAir: 0.008, density: 0.00085, slop: 0.025,
       };

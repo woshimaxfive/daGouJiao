@@ -106,7 +106,7 @@ button:focus-visible, a:focus-visible, canvas:focus-visible, summary:focus-visib
 .chain-heading::-webkit-details-marker { display: none; }
 .chain-title { font-family: 'Microsoft YaHei UI', 'PingFang SC', sans-serif; font-size: 20px; font-weight: 900; letter-spacing: -.06em; }
 .chain-toggle { display: none; }
-.tier-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; list-style: none; margin: 14px 0 0; padding: 0; }
+.tier-list { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; list-style: none; margin: 14px 0 0; padding: 0; }
 .tier-list li { min-width: 0; padding: 9px 5px 10px; border: 1px solid var(--line); border-radius: 7px; background: rgba(255, 254, 249, .62); text-align: center; }
 .tier-list li.reached { border-color: var(--red); background: #f6fbff; }
 .tier-dot { display: block; width: 42px; height: 50px; object-fit: contain; margin: 0 auto 5px; }
@@ -204,7 +204,7 @@ button:focus-visible, a:focus-visible, canvas:focus-visible, summary:focus-visib
   .chain-heading .card-kicker { display: none; }
   .chain-title { font-size: 14px; letter-spacing: 0; }
   .chain-toggle { display: inline; color: var(--muted); font-size: 11px; }
-  .chain-toggle::before { content: '查看 8 级 ＋'; }
+  .chain-toggle::before { content: '查看 10 级 ＋'; }
   .chain-card[open] .chain-toggle::before { content: '收起 －'; }
   .tier-list { margin-top: 0; }
   .control-note { margin: 12px 0; }

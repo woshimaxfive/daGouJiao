@@ -7,15 +7,15 @@
   <meta name="description" content="把憋住的汪汪声合成一声大狗叫。">
   <title>合成大狗叫</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="style.css?v=11">
+  <link rel="stylesheet" href="style.css?v=13">
   <script defer src="vendor/matter.min.js"></script>
   <script defer src="game-rules.js"></script>
-  <script defer src="dog-visuals.js?v=4"></script>
+  <script defer src="dog-visuals.js?v=13"></script>
   <script defer src="dog-shape.js"></script>
-  <script defer src="dog-physics.js?v=12"></script>
+  <script defer src="dog-physics.js?v=13"></script>
   <script defer src="dog-feedback.js"></script>
   <script defer src="dog-motion.js?v=11"></script>
-  <script defer src="game.js?v=12"></script>
+  <script defer src="game.js?v=13"></script>
 </head>
 <body>
   <div class="sky-scene" aria-hidden="true">
@@ -56,7 +56,7 @@
 
       <section class="board-panel" aria-label="游戏棋盘">
         <div class="board-heading">
-          <span class="board-index">8级＋8级，听大狗叫</span>
+          <span class="board-index">10级＋10级，听大狗叫</span>
           <span class="board-rule">同级相碰，越合越大</span>
         </div>
         <div class="board-stage" id="board-stage">
@@ -65,7 +65,7 @@
           <div class="board-overlay" id="image-loading" role="status">
             <div class="game-over-card">
               <h2>狗狗准备中</h2>
-              <p id="image-loading-message">正在加载狗图（0/8）</p>
+              <p id="image-loading-message">正在加载狗图（0/10）</p>
               <button id="retry-images-button" type="button" hidden>重新加载图片</button>
             </div>
           </div>

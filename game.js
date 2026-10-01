@@ -12,8 +12,8 @@
   const { chooseSpawnTier: pickTier, advanceDanger, dangerNotice, roundResult } = window.DagouRules;
   const WIDTH = 420;
   const HEIGHT = 680;
-  const DANGER_Y = 160;
-  const DOG_SIZE_SCALE = 1.1;
+  const DANGER_Y = 142;
+  const DOG_SIZE_SCALE = 1;
   const DANGER_SECONDS = 1.5;
   const REST_SPEED_PER_SECOND = 140;
   const DROP_COOLDOWN = 380;

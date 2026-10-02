@@ -272,6 +272,18 @@
       refresh(true);
     }
 
+    function clearInput() {
+      detector.reset();
+      tilt.reset();
+      keys.clear();
+      refresh(true);
+    }
+
+    function restoreCooldown(milliseconds) {
+      nextShakeAt = now() + Math.max(0, Math.min(COOLDOWN_MS, milliseconds));
+      refresh(true);
+    }
+
     target.document.addEventListener('visibilitychange', () => {
       detector.reset();
       tilt.reset();
@@ -287,7 +299,8 @@
 
     return Object.freeze({
       toggle: () => getState().enabled ? disable() : enable(),
-      resetRound, refresh, getState,
+      resetRound, clearInput, restoreCooldown, refresh, getState,
+      remainingCooldown: () => Math.max(0, nextShakeAt - now()),
     });
   }
 

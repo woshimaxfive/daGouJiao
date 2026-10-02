@@ -7,15 +7,16 @@
   <meta name="description" content="把憋住的汪汪声合成一声大狗叫。">
   <title>合成大狗叫</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="style.css?v=16">
+  <link rel="stylesheet" href="style.css?v=17">
   <script defer src="vendor/matter.min.js"></script>
   <script defer src="game-rules.js"></script>
+  <script defer src="game-save.js?v=17"></script>
   <script defer src="dog-visuals.js?v=16"></script>
   <script defer src="dog-shape.js"></script>
   <script defer src="dog-physics.js?v=13"></script>
   <script defer src="dog-feedback.js"></script>
-  <script defer src="dog-motion.js?v=15"></script>
-  <script defer src="game.js?v=16"></script>
+  <script defer src="dog-motion.js?v=17"></script>
+  <script defer src="game.js?v=17"></script>
 </head>
 <body>
   <div class="sky-scene" aria-hidden="true">
@@ -69,6 +70,15 @@
               <button id="retry-images-button" type="button" hidden>重新加载图片</button>
             </div>
           </div>
+          <div class="board-overlay" id="pause-overlay" role="dialog" aria-labelledby="pause-title" aria-describedby="pause-message" hidden>
+            <div class="game-over-card pause-card">
+              <h2 id="pause-title">休息一下</h2>
+              <p id="pause-message">狗狗等你回来，继续后再动。</p>
+              <p class="pause-summary" id="pause-summary"></p>
+              <button id="resume-button" type="button">继续游戏</button>
+              <button class="secondary-action" id="new-round-button" type="button">新开一局</button>
+            </div>
+          </div>
           <div class="board-overlay" id="game-over" hidden>
             <div class="game-over-card">
               <span class="over-eyebrow" id="record-status"></span>
@@ -88,6 +98,7 @@
           <span class="touch-hint">按住移动瞄准，松手投放</span>
         </div>
         <div class="image-status" id="image-status" hidden><span id="image-status-message" role="status"></span><button id="refresh-images-button" type="button" hidden>重试清晰图</button></div>
+        <div class="round-controls"><button id="pause-button" type="button" aria-controls="pause-overlay" aria-expanded="false">暂停</button><span>离开自动暂停 · 下次可续局</span></div>
         <div class="motion-controls" id="motion-controls" hidden>
           <button id="motion-button" type="button" aria-pressed="false" aria-describedby="motion-status">重力：关</button>
           <span id="motion-status" role="status" aria-live="polite">开启后左右倾斜，也可摇一摇</span>

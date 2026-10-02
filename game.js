@@ -68,6 +68,17 @@
   const dangerLabel = document.getElementById('danger-label');
   const dangerTime = document.getElementById('danger-time');
   const liveStatus = document.getElementById('live-status');
+  const pauseButton = document.getElementById('pause-button');
+  const pauseOverlay = document.getElementById('pause-overlay');
+  const pauseTitle = document.getElementById('pause-title');
+  const pauseMessage = document.getElementById('pause-message');
+  const pauseSummary = document.getElementById('pause-summary');
+  const resumeButton = document.getElementById('resume-button');
+  const newRoundButton = document.getElementById('new-round-button');
+  const roundSave = window.DagouSave;
+  // localStorage 的属性本身也可能被浏览器隐私设置禁止访问。
+  let roundStorage;
+  try { roundStorage = window.localStorage; } catch { roundStorage = null; }
 
   const imageLoading = document.getElementById('image-loading');
   const imageLoadingMessage = document.getElementById('image-loading-message');
@@ -111,6 +122,7 @@
         readyImage(tierImage(tier))).every(Boolean));
     if (!visualsReady && starterReady) {
       visualsReady = true;
+      resumeButton.disabled = false;
       imageLoading.hidden = true;
       updateNext();
       liveStatus.textContent = '狗图准备好了，可以开始投放。';
@@ -232,6 +244,8 @@
   let physicsAccumulator = 0;
   let previousFrame = 0;
   let gameOver = false;
+  let paused = false;
+  let pausedShakeCooldown = 0;
   let touchAiming = false;
   let audioContext;
   let finaleAudioLoad;
@@ -413,10 +427,109 @@
     return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
   }
 
+  function snapshotRound() {
+    return {
+      score, dropCount, bestAtStart, currentTier, nextTier, maxReached, aimX,
+      durationMs: roundDurationMs + (roundStartedAt === null ? 0 : performance.now() - roundStartedAt),
+      dropCooldown: Math.max(0, DROP_COOLDOWN - (elapsed - lastDropAt)),
+      shakeCooldown: paused ? pausedShakeCooldown : motion?.remainingCooldown() || 0,
+      pieces: pieces.map(body => {
+        const velocity = Body.getVelocity(body);
+        return {
+          tier: body.gameTier, x: body.position.x, y: body.position.y, angle: body.angle,
+          vx: velocity.x, vy: velocity.y, angularVelocity: Body.getAngularVelocity(body),
+          landed: body.gameLanded, dangerTime: body.gameOverTime,
+        };
+      }),
+    };
+  }
+
+  function saveRound() {
+    if (gameOver || dropCount === 0) return false;
+    return roundSave.write(roundStorage, snapshotRound());
+  }
+
+  function showPause(restoring = false, focus = true) {
+    pauseTitle.textContent = restoring ? '继续上次？' : '休息一下';
+    pauseMessage.textContent = restoring ? '上次的狗狗还在，接着合成吧。' : '狗狗等你回来，继续后再动。';
+    pauseSummary.textContent = `${score.toLocaleString('zh-CN')} 分 · ${formatDuration(roundDurationMs)} · 已投 ${dropCount} 次`;
+    resumeButton.textContent = restoring ? '继续上次' : '继续游戏';
+    resumeButton.disabled = !visualsReady;
+    pauseButton.textContent = '继续';
+    pauseButton.setAttribute('aria-expanded', 'true');
+    pauseOverlay.hidden = false;
+    canvas.setAttribute('aria-disabled', 'true');
+    motionButton.disabled = true;
+    if (focus) resumeButton.focus({ preventScroll: true });
+  }
+
+  function pauseRound(focus = true) {
+    if (gameOver || paused) return;
+    recordRoundTime();
+    pausedShakeCooldown = motion?.remainingCooldown() || 0;
+    paused = true;
+    touchAiming = false;
+    physicsAccumulator = 0;
+    previousFrame = 0;
+    stopFinaleAudio();
+    motion?.clearInput();
+    showPause(false, focus);
+    const saved = saveRound();
+    if (dropCount > 0 && !saved) pauseMessage.textContent = '已暂停。当前浏览器未能保存，关闭页面后可能无法续局。';
+    liveStatus.textContent = '游戏已暂停。';
+  }
+
+  function resumeRound() {
+    if (!paused || document.hidden || !visualsReady) return;
+    paused = false;
+    pauseOverlay.hidden = true;
+    pauseButton.textContent = '暂停';
+    pauseButton.setAttribute('aria-expanded', 'false');
+    canvas.removeAttribute('aria-disabled');
+    physicsAccumulator = 0;
+    previousFrame = 0;
+    motion?.clearInput();
+    motion?.restoreCooldown(pausedShakeCooldown);
+    if (dropCount > 0) roundStartedAt = performance.now();
+    canvas.focus({ preventScroll: true });
+    liveStatus.textContent = '继续游戏。';
+  }
+
+  function restoreRound(round) {
+    score = round.score;
+    dropCount = round.dropCount;
+    bestAtStart = round.bestAtStart;
+    roundDurationMs = round.durationMs;
+    currentTier = round.currentTier;
+    nextTier = round.nextTier;
+    maxReached = round.maxReached;
+    aimX = clampAim(round.aimX);
+    lastDropAt = elapsed - DROP_COOLDOWN + round.dropCooldown;
+    for (const piece of round.pieces) {
+      const body = makePiece(piece.x, piece.y, piece.tier, piece.landed);
+      Body.setAngle(body, piece.angle);
+      Body.setVelocity(body, { x: piece.vx, y: piece.vy });
+      Body.setAngularVelocity(body, piece.angularVelocity);
+      body.gameOverTime = piece.dangerTime;
+    }
+    best = Math.max(best, score);
+    saveString('dagou.best', String(best));
+    displayScore(scoreElement, score);
+    displayScore(bestElement, best);
+    updateNext();
+    updateTierList();
+    paused = true;
+    pausedShakeCooldown = round.shakeCooldown;
+    // 只重建局面，不推进物理或警戒倒计时，直到玩家选择继续。
+    showPause(true);
+  }
+
   function endGame() {
     if (gameOver) return;
     recordRoundTime();
     gameOver = true;
+    roundSave.clear(roundStorage);
+    pauseButton.disabled = true;
     motion?.refresh(true);
     touchAiming = false;
     result = roundResult(score, bestAtStart, maxReached);
@@ -437,7 +550,8 @@
     liveStatus.textContent = `游戏结束，本局 ${score} 分，时长 ${finalDuration.textContent}，投放 ${dropCount} 次，最高 ${result.maxLevel} 级${TIERS[result.maxTier].name}。${result.isNewRecord ? '刷新最高纪录！' : ''}`;
   }
 
-  function reset() {
+  function reset(clearSave = true) {
+    if (clearSave) roundSave.clear(roundStorage);
     stopFinaleAudio();
     if (engine) {
       Events.off(engine, 'collisionStart', onCollision);
@@ -475,6 +589,14 @@
     celebrationUntil = 0;
     shakeUntil = 0;
     gameOver = false;
+    paused = false;
+    pausedShakeCooldown = 0;
+    previousFrame = 0;
+    pauseOverlay.hidden = true;
+    pauseButton.disabled = false;
+    pauseButton.textContent = '暂停';
+    pauseButton.setAttribute('aria-expanded', 'false');
+    canvas.removeAttribute('aria-disabled');
     touchAiming = false;
     updateDangerNotice({ phase: 'hidden', remaining: 0 }, false);
     overElement.hidden = true;
@@ -498,7 +620,7 @@
 
   function updateMotionUI(state) {
     motionControls.hidden = !state.eligible;
-    motionButton.disabled = !state.supported;
+    motionButton.disabled = !state.supported || paused || gameOver;
     motionButton.setAttribute('aria-pressed', String(state.enabled));
     motionButton.textContent = state.enabled ? '重力：开' : '重力：关';
     const messages = {
@@ -513,7 +635,7 @@
       const tiltLabel = !state.tiltReady ? '倾斜数据不可用'
         : state.tilt < -0.15 ? '重力向左' : state.tilt > 0.15 ? '重力向右'
           : state.input === 'keyboard' ? '按住 A/D 左右倾斜' : '左右倾斜，移动狗堆';
-      motionStatus.textContent = gameOver ? '本局已结束，重开后可用'
+      motionStatus.textContent = gameOver ? '本局已结束，重开后可用' : paused ? '已暂停，继续后可用'
         : `${tiltLabel} · ${state.cooldown > 0 ? `摇动冷却 ${state.cooldown} 秒` : state.input === 'keyboard' ? 'W 晃动' : '可摇一摇'}`;
     } else {
       motionStatus.textContent = messages[state.phase];
@@ -563,7 +685,7 @@
   }
 
   function drop() {
-    if (!visualsReady || gameOver || elapsed - lastDropAt < DROP_COOLDOWN) return false;
+    if (!visualsReady || gameOver || paused || document.hidden || elapsed - lastDropAt < DROP_COOLDOWN) return false;
     const piece = makePiece(clampAim(aimX), 65, currentTier);
     Body.setVelocity(piece, { x: 0, y: 0.5 });
     // 从首次成功投放开始计时，合成生成的狗不计入投放次数。
@@ -575,6 +697,7 @@
     nextTier = pickTier(SPAWN_WEIGHTS, Math.random, currentTier);
     aimX = clampAim(aimX);
     updateNext();
+    saveRound();
     return true;
   }
 
@@ -885,7 +1008,7 @@
 
   function draw(deltaSeconds) {
     context.save();
-    if (!reducedMotion.matches && elapsed < shakeUntil) context.translate((Math.random() - .5) * 7, (Math.random() - .5) * 7);
+    if (!paused && !document.hidden && !reducedMotion.matches && elapsed < shakeUntil) context.translate((Math.random() - .5) * 7, (Math.random() - .5) * 7);
     drawBoard();
     for (const body of pieces) drawPiece(body);
     // 牌子统一在狗图之后绘制，堆叠时也能读到等级。
@@ -902,13 +1025,14 @@
   }
 
   function frame(now) {
-    const frameDelta = previousFrame ? Math.min(50, now - previousFrame) : STEP;
+    const active = !paused && !document.hidden;
+    const frameDelta = active ? (previousFrame ? Math.min(50, now - previousFrame) : STEP) : 0;
     previousFrame = now;
     elapsed += frameDelta;
     const motionState = motion?.getState();
     dogPhysics.updateMotion(engine, pieces,
-      !gameOver && !document.hidden && motionState?.phase === 'active', motionState?.tilt || 0, frameDelta);
-    if (!gameOver) {
+      !gameOver && active && motionState?.phase === 'active', motionState?.tilt || 0, frameDelta);
+    if (!gameOver && active) {
       let steps = 0;
       physicsAccumulator += frameDelta;
       while (physicsAccumulator >= STEP && steps < 4) {
@@ -929,7 +1053,7 @@
   }
 
   canvas.addEventListener('pointerdown', event => {
-    if (gameOver) return;
+    if (gameOver || paused || document.hidden) return;
     canvas.focus({ preventScroll: true });
     setAimFromPointer(event);
     if (event.pointerType === 'touch') {
@@ -941,6 +1065,7 @@
     }
   });
   canvas.addEventListener('pointermove', event => {
+    if (gameOver || paused || document.hidden) return;
     if (event.pointerType !== 'touch' || touchAiming) setAimFromPointer(event);
   });
   canvas.addEventListener('pointerup', event => {
@@ -959,6 +1084,8 @@
     if (controlFocused && (event.code === 'Space' || event.code === 'Enter')) return;
     if (event.key === 'r' || event.key === 'R') { reset(); return; }
     if (event.key === 'm' || event.key === 'M') { toggleSound(); return; }
+    if (event.code === 'KeyP') { event.preventDefault(); paused ? resumeRound() : pauseRound(); return; }
+    if (paused || gameOver || document.hidden) return;
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       event.preventDefault();
       aimX = clampAim(aimX + (event.key === 'ArrowLeft' ? -18 : 18));
@@ -970,22 +1097,30 @@
   });
   document.getElementById('restart-button').addEventListener('click', reset);
   document.getElementById('play-again-button').addEventListener('click', reset);
+  pauseButton.addEventListener('click', () => paused ? resumeRound() : pauseRound());
+  resumeButton.addEventListener('click', resumeRound);
+  newRoundButton.addEventListener('click', () => reset());
   soundButton.addEventListener('click', toggleSound);
   motion = window.DagouMotion.create({
     target: window,
-    canShake: () => !gameOver && visualsReady && !touchAiming,
+    canShake: () => !gameOver && !paused && !document.hidden && visualsReady && !touchAiming,
     onShake: shakeDogs,
     onState: updateMotionUI,
   });
-  motionButton.addEventListener('click', () => motion.toggle());
+  motionButton.addEventListener('click', () => { if (!paused && !gameOver) motion.toggle(); });
   motion.refresh(true);
   window.addEventListener('resize', resizeCanvas);
   window.addEventListener('online', loadVisuals);
   document.addEventListener('visibilitychange', () => {
-    // 切到后台时暂停统计，返回当前这一局后继续。
-    if (document.hidden) recordRoundTime();
-    else if (dropCount > 0 && !gameOver && roundStartedAt === null) roundStartedAt = performance.now();
+    if (document.hidden) { pauseRound(false); saveRound(); }
+    else {
+      previousFrame = 0;
+      if (paused) resumeButton.focus({ preventScroll: true });
+    }
   });
+  window.addEventListener('pagehide', () => { pauseRound(false); saveRound(); });
+  // 移动端可能直接回收页面，定期保存以减少这种情况下丢失的进度。
+  window.setInterval(() => { if (!paused && !document.hidden) saveRound(); }, 1000);
   retryImagesButton.addEventListener('click', loadVisuals);
   refreshImagesButton.addEventListener('click', loadVisuals);
   function syncEvolutionLayout() { evolutionPanel.open = !mobileLayout.matches; }
@@ -995,7 +1130,9 @@
   soundButton.textContent = muted ? '音效：关' : '音效：开';
   soundButton.setAttribute('aria-pressed', String(muted));
   resizeCanvas();
-  reset();
+  const savedRound = roundSave.read(roundStorage);
+  reset(false);
+  if (savedRound) restoreRound(savedRound);
   loadVisuals();
   requestAnimationFrame(frame);
 

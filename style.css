@@ -70,6 +70,10 @@ button:focus-visible, a:focus-visible, canvas:focus-visible, summary:focus-visib
 .motion-controls button[aria-pressed='true'] { color: #176e73; border-color: #a6cfd0; background: #e2f3f2; }
 .motion-controls button:disabled { opacity: .6; }
 .motion-controls span { min-width: 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.round-controls { display: flex; align-items: center; gap: 8px; margin: 4px 5px 2px; }
+.round-controls button { min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); color: var(--ink); font-size: 11px; font-weight: 800; }
+.round-controls button:disabled { opacity: .6; }
+.round-controls span { color: var(--muted); font-size: 10px; }
 .board-index { font-size: 10px; font-weight: 900; letter-spacing: .14em; }
 .board-rule { font-size: 10px; font-weight: 700; }
 .board-stage { position: relative; width: 100%; overflow: hidden; border: 1px solid #b9d3e6; border-radius: 10px; background: linear-gradient(180deg, #f9fcff, #edf7fe 72%, #e4f2fb); }
@@ -142,6 +146,10 @@ button:focus-visible, a:focus-visible, canvas:focus-visible, summary:focus-visib
 .over-tier b { display: grid; place-items: center; width: 24px; height: 25px; border-radius: 5px; background: var(--tier-color); color: var(--white); font-size: 13px; }
 .game-over-card button { width: 100%; min-height: 46px; border: 2px solid var(--ink); border-radius: 6px; background: var(--red); color: var(--white); font-size: 14px; font-weight: 900; }
 .game-over-card button:hover { background: #ca4634; }
+.pause-card p { color: var(--muted); font-size: 12px; line-height: 1.7; }
+.pause-card .pause-summary { margin: 16px 0; color: var(--ink); font-weight: 800; font-variant-numeric: tabular-nums; }
+.pause-card .secondary-action { margin-top: 10px; background: var(--white); color: var(--ink); }
+.pause-card .secondary-action:hover { background: #e9f4fc; }
 
 .site-footer { display: flex; align-items: center; justify-content: space-between; min-height: 54px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .05em; }
 

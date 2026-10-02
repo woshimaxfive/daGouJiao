@@ -68,7 +68,6 @@
   const dangerLabel = document.getElementById('danger-label');
   const dangerTime = document.getElementById('danger-time');
   const liveStatus = document.getElementById('live-status');
-  const pauseButton = document.getElementById('pause-button');
   const pauseOverlay = document.getElementById('pause-overlay');
   const pauseTitle = document.getElementById('pause-title');
   const pauseMessage = document.getElementById('pause-message');
@@ -455,8 +454,6 @@
     pauseSummary.textContent = `${score.toLocaleString('zh-CN')} 分 · ${formatDuration(roundDurationMs)} · 已投 ${dropCount} 次`;
     resumeButton.textContent = restoring ? '继续上次' : '继续游戏';
     resumeButton.disabled = !visualsReady;
-    pauseButton.textContent = '继续';
-    pauseButton.setAttribute('aria-expanded', 'true');
     pauseOverlay.hidden = false;
     canvas.setAttribute('aria-disabled', 'true');
     motionButton.disabled = true;
@@ -483,8 +480,6 @@
     if (!paused || document.hidden || !visualsReady) return;
     paused = false;
     pauseOverlay.hidden = true;
-    pauseButton.textContent = '暂停';
-    pauseButton.setAttribute('aria-expanded', 'false');
     canvas.removeAttribute('aria-disabled');
     physicsAccumulator = 0;
     previousFrame = 0;
@@ -529,7 +524,6 @@
     recordRoundTime();
     gameOver = true;
     roundSave.clear(roundStorage);
-    pauseButton.disabled = true;
     motion?.refresh(true);
     touchAiming = false;
     result = roundResult(score, bestAtStart, maxReached);
@@ -593,9 +587,6 @@
     pausedShakeCooldown = 0;
     previousFrame = 0;
     pauseOverlay.hidden = true;
-    pauseButton.disabled = false;
-    pauseButton.textContent = '暂停';
-    pauseButton.setAttribute('aria-expanded', 'false');
     canvas.removeAttribute('aria-disabled');
     touchAiming = false;
     updateDangerNotice({ phase: 'hidden', remaining: 0 }, false);
@@ -1084,7 +1075,6 @@
     if (controlFocused && (event.code === 'Space' || event.code === 'Enter')) return;
     if (event.key === 'r' || event.key === 'R') { reset(); return; }
     if (event.key === 'm' || event.key === 'M') { toggleSound(); return; }
-    if (event.code === 'KeyP') { event.preventDefault(); paused ? resumeRound() : pauseRound(); return; }
     if (paused || gameOver || document.hidden) return;
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       event.preventDefault();
@@ -1097,7 +1087,6 @@
   });
   document.getElementById('restart-button').addEventListener('click', reset);
   document.getElementById('play-again-button').addEventListener('click', reset);
-  pauseButton.addEventListener('click', () => paused ? resumeRound() : pauseRound());
   resumeButton.addEventListener('click', resumeRound);
   newRoundButton.addEventListener('click', () => reset());
   soundButton.addEventListener('click', toggleSound);

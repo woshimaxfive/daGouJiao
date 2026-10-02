@@ -7,7 +7,7 @@
   <meta name="description" content="把憋住的汪汪声合成一声大狗叫。">
   <title>合成大狗叫</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="style.css?v=17">
+  <link rel="stylesheet" href="style.css?v=18">
   <script defer src="vendor/matter.min.js"></script>
   <script defer src="game-rules.js"></script>
   <script defer src="game-save.js?v=17"></script>
@@ -16,7 +16,7 @@
   <script defer src="dog-physics.js?v=13"></script>
   <script defer src="dog-feedback.js"></script>
   <script defer src="dog-motion.js?v=17"></script>
-  <script defer src="game.js?v=17"></script>
+  <script defer src="game.js?v=18"></script>
 </head>
 <body>
   <div class="sky-scene" aria-hidden="true">
@@ -98,7 +98,6 @@
           <span class="touch-hint">按住移动瞄准，松手投放</span>
         </div>
         <div class="image-status" id="image-status" hidden><span id="image-status-message" role="status"></span><button id="refresh-images-button" type="button" hidden>重试清晰图</button></div>
-        <div class="round-controls"><button id="pause-button" type="button" aria-controls="pause-overlay" aria-expanded="false">暂停</button><span>离开自动暂停 · 下次可续局</span></div>
         <div class="motion-controls" id="motion-controls" hidden>
           <button id="motion-button" type="button" aria-pressed="false" aria-describedby="motion-status">重力：关</button>
           <span id="motion-status" role="status" aria-live="polite">开启后左右倾斜，也可摇一摇</span>

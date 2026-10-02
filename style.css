@@ -70,10 +70,6 @@ button:focus-visible, a:focus-visible, canvas:focus-visible, summary:focus-visib
 .motion-controls button[aria-pressed='true'] { color: #176e73; border-color: #a6cfd0; background: #e2f3f2; }
 .motion-controls button:disabled { opacity: .6; }
 .motion-controls span { min-width: 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
-.round-controls { display: flex; align-items: center; gap: 8px; margin: 4px 5px 2px; }
-.round-controls button { min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); color: var(--ink); font-size: 11px; font-weight: 800; }
-.round-controls button:disabled { opacity: .6; }
-.round-controls span { color: var(--muted); font-size: 10px; }
 .board-index { font-size: 10px; font-weight: 900; letter-spacing: .14em; }
 .board-rule { font-size: 10px; font-weight: 700; }
 .board-stage { position: relative; width: 100%; overflow: hidden; border: 1px solid #b9d3e6; border-radius: 10px; background: linear-gradient(180deg, #f9fcff, #edf7fe 72%, #e4f2fb); }

@@ -23,6 +23,7 @@
   const FINALE_VOLUME = 0.5;
   const FINALE_FADE_IN = 0.15;
   const FINALE_FADE_OUT = 0.2;
+  const FINALE_AUDIO_WAIT_MS = 100;
   const TIERS = [
     { name: '闭麦', radius: 21, color: '#526879' },
     { name: '蓄力', radius: 28, color: '#167c80' },
@@ -257,7 +258,9 @@
   let finaleSource;
   let finaleGain;
   let finalePlaybackId = 0;
-  let celebrationUntil = 0;
+  let finaleCue = null;
+  let finaleEffect = null;
+  let finaleHoldRemaining = 0;
   let shakeUntil = 0;
   let warningProgress = 0;
   let motion;
@@ -346,7 +349,7 @@
   function addPoints(points, x, y) {
     score += points;
     displayScore(scoreElement, score);
-    floatingTexts.push({ x, y, value: `+${points}`, life: 1 });
+    if (x !== undefined) floatingTexts.push({ x, y, value: `+${points}`, life: 1 });
     if (score > best) {
       best = score;
       displayScore(bestElement, best);
@@ -364,15 +367,14 @@
       const vy = Math.min(-1.2, (a.velocity.y + b.velocity.y) * 0.1 - 1.4);
       Composite.remove(engine.world, [a, b]);
       pieces = pieces.filter(piece => piece !== a && piece !== b);
-      burst(x, y, TIERS[tier].color, tier === TIERS.length - 1 ? 34 : 14);
-
       if (tier === TIERS.length - 1) {
-        addPoints(200, x, y);
-        celebrationUntil = elapsed + 2000;
-        shakeUntil = elapsed + 400;
-        bark(tier, true);
-        liveStatus.textContent = '大狗叫！最高级合成，获得 200 分。';
+        addPoints(200);
+        finaleHoldRemaining = feedback.FINALE_HOLD_MS;
+        const cue = { x, y, tier };
+        finaleCue = cue;
+        playFinaleAudio(tier, () => startFinaleCelebration(cue));
       } else {
+        burst(x, y, TIERS[tier].color);
         const upgraded = makePiece(x, y, tier + 1, true);
         dogPhysics.keepInside(upgraded, WIDTH, HEIGHT);
         Body.setVelocity(upgraded, { x: vx, y: vy });
@@ -380,12 +382,21 @@
         upgraded.gamePopAt = elapsed;
         dogPhysics.applyMergePulse(pieces, upgraded, elapsed);
         addPoints(((tier + 1) * (tier + 2)) / 2, x, y);
-        bark(tier + 1, false);
+        bark(tier + 1);
         liveStatus.textContent = `合成${TIERS[tier + 1].name}，当前 ${score} 分。`;
       }
     }
     pendingMerges = [];
     pendingIds.clear();
+  }
+
+  function startFinaleCelebration(cue) {
+    if (!cue || finaleCue !== cue || paused || document.hidden || gameOver) return;
+    finaleCue = null;
+    finaleEffect = { x: cue.x, y: cue.y, age: 0 };
+    burst(cue.x, cue.y, TIERS[cue.tier].color, reducedMotion.matches ? 12 : 34);
+    floatingTexts.push({ x: cue.x, y: cue.y, value: '+200', life: 1, big: true });
+    liveStatus.textContent = '大狗叫！最高级合成，获得 200 分。';
   }
 
   function updateDanger(deltaSeconds) {
@@ -474,6 +485,8 @@
     touchAiming = false;
     physicsAccumulator = 0;
     previousFrame = 0;
+    finaleCue = null;
+    finaleHoldRemaining = 0;
     stopFinaleAudio();
     motion?.clearInput();
     showPause(false, focus);
@@ -626,7 +639,9 @@
     currentTier = pickTier(SPAWN_WEIGHTS);
     nextTier = pickTier(SPAWN_WEIGHTS, Math.random, currentTier);
     lastDropAt = elapsed - DROP_COOLDOWN;
-    celebrationUntil = 0;
+    finaleCue = null;
+    finaleEffect = null;
+    finaleHoldRemaining = 0;
     shakeUntil = 0;
     gameOver = false;
     paused = false;
@@ -722,7 +737,7 @@
   }
 
   function drop() {
-    if (!visualsReady || gameOver || paused || document.hidden || elapsed - lastDropAt < DROP_COOLDOWN) return false;
+    if (!visualsReady || gameOver || paused || document.hidden || finaleHoldRemaining > 0 || elapsed - lastDropAt < DROP_COOLDOWN) return false;
     const piece = makePiece(clampAim(aimX), 65, currentTier);
     Body.setVelocity(piece, { x: 0, y: 0.5 });
     // 从首次成功投放开始计时，合成生成的狗不计入投放次数。
@@ -780,17 +795,23 @@
     }
   }
 
-  async function playFinaleAudio(tier) {
+  async function playFinaleAudio(tier, onStart) {
     stopFinaleAudio();
     const playbackId = finalePlaybackId;
     const audio = getAudio();
-    if (!audio) return;
+    if (!audio) { onStart(); return; }
+    let timeout;
     try {
-      const buffer = await prepareFinaleAudio(audio);
-      if (muted || playbackId !== finalePlaybackId) return;
-      if (!buffer) throw new Error('大狗叫录音无法解码');
-      if (audio.state === 'suspended') await audio.resume();
-      if (muted || playbackId !== finalePlaybackId) return;
+      // 通常首次投放时已经预热完成；弱网或音频上下文未就绪时及时退回备用音效。
+      const ready = prepareFinaleAudio(audio).then(async buffer => {
+        if (!buffer) throw new Error('大狗叫录音无法解码');
+        if (audio.state === 'suspended') await audio.resume();
+        return buffer;
+      });
+      const buffer = await Promise.race([ready, new Promise((_, reject) => {
+        timeout = window.setTimeout(() => reject(new Error('录音尚未就绪')), FINALE_AUDIO_WAIT_MS);
+      })]);
+      if (muted || playbackId !== finalePlaybackId || paused || document.hidden || gameOver) return;
       const source = audio.createBufferSource();
       const gain = audio.createGain();
       const start = audio.currentTime;
@@ -813,10 +834,14 @@
       finaleSource = source;
       finaleGain = gain;
       source.start(start);
+      onStart();
     } catch {
-      if (muted || playbackId !== finalePlaybackId) return;
+      if (muted || playbackId !== finalePlaybackId || paused || document.hidden || gameOver) return;
       synthBark(tier, true);
-      liveStatus.textContent = '大狗叫！录音未能播放，暂用合成音效；请通过本地 HTTP 服务打开。';
+      onStart();
+      liveStatus.textContent = '大狗叫！录音暂不可用，已播放备用音效。';
+    } finally {
+      window.clearTimeout(timeout);
     }
   }
 
@@ -843,11 +868,7 @@
     tone(320, 0.11, 0.055, 'triangle', 0.01);
   }
 
-  function bark(tier, finale) {
-    if (finale) {
-      playFinaleAudio(tier);
-      return;
-    }
+  function bark(tier) {
     synthBark(tier, false);
   }
 
@@ -863,7 +884,10 @@
 
   function toggleSound() {
     muted = !muted;
-    if (muted) stopFinaleAudio();
+    if (muted) {
+      startFinaleCelebration(finaleCue);
+      stopFinaleAudio();
+    }
     saveString('dagou.muted', muted ? '1' : '0');
     soundButton.textContent = muted ? '音效：关' : '音效：开';
     soundButton.setAttribute('aria-pressed', String(muted));
@@ -1021,7 +1045,13 @@
       context.save();
       context.globalAlpha = Math.max(0, label.life);
       context.fillStyle = '#9d3827';
-      context.font = '900 24px "Trebuchet MS", sans-serif';
+      context.font = `900 ${label.big ? 32 : 24}px "Trebuchet MS", sans-serif`;
+      context.textAlign = 'center';
+      if (label.big) {
+        context.lineWidth = 5;
+        context.strokeStyle = '#fff3d1';
+        context.strokeText(label.value, label.x, label.y);
+      }
       context.textAlign = 'center';
       context.fillText(label.value, label.x, label.y);
       context.restore();
@@ -1029,9 +1059,33 @@
     floatingTexts = floatingTexts.filter(label => label.life > 0);
   }
 
+  function drawFinaleRing() {
+    if (!finaleEffect || finaleEffect.age >= feedback.FINALE_RING_MS) return;
+    const progress = finaleEffect.age / feedback.FINALE_RING_MS;
+    const fade = (1 - progress) ** 2;
+    const radius = reducedMotion.matches ? 90 : 38 + WIDTH * .65 * (1 - (1 - progress) ** 3);
+    const { x, y } = finaleEffect;
+    context.save();
+    const halo = context.createRadialGradient(x, y, 0, x, y, radius);
+    halo.addColorStop(0, 'rgba(255, 243, 209, 0)');
+    halo.addColorStop(.7, `rgba(255, 243, 209, ${.12 * fade})`);
+    halo.addColorStop(1, 'rgba(255, 243, 209, 0)');
+    context.fillStyle = halo;
+    context.beginPath();
+    context.arc(x, y, radius, 0, Math.PI * 2);
+    context.fill();
+    context.globalAlpha = .35 * fade;
+    context.strokeStyle = TIERS[TIERS.length - 1].color;
+    context.lineWidth = 3;
+    context.beginPath();
+    context.arc(x, y, radius * .8, 0, Math.PI * 2);
+    context.stroke();
+    context.restore();
+  }
+
   function drawCelebration() {
-    if (elapsed >= celebrationUntil) return;
-    const remaining = celebrationUntil - elapsed;
+    if (!finaleEffect) return;
+    const remaining = 2000 - finaleEffect.age;
     context.save();
     context.globalAlpha = Math.min(1, remaining / 450);
     context.fillStyle = '#e65742';
@@ -1055,6 +1109,7 @@
         body.gameSprite, pop, squash, body.gameSquashAngle);
     }
     drawAim();
+    drawFinaleRing();
     drawEffects(deltaSeconds);
     drawCelebration();
     context.restore();
@@ -1065,23 +1120,35 @@
     const active = !paused && !document.hidden;
     const frameDelta = active ? (previousFrame ? Math.min(50, now - previousFrame) : STEP) : 0;
     previousFrame = now;
-    elapsed += frameDelta;
+    const hold = feedback.advanceFinaleHold(finaleHoldRemaining, frameDelta);
+    finaleHoldRemaining = hold.remaining;
+    elapsed += hold.simulationDelta;
+    if (finaleEffect) {
+      finaleEffect.age += frameDelta;
+      if (finaleEffect.age >= 2000) finaleEffect = null;
+    }
     const motionState = motion?.getState();
     dogPhysics.updateMotion(engine, pieces,
-      !gameOver && active && motionState?.phase === 'active', motionState?.tilt || 0, frameDelta);
-    if (!gameOver && active) {
+      !gameOver && active && hold.simulationDelta > 0 && motionState?.phase === 'active',
+      motionState?.tilt || 0, hold.simulationDelta);
+    if (!gameOver && active && hold.simulationDelta > 0) {
       let steps = 0;
-      physicsAccumulator += frameDelta;
+      physicsAccumulator += hold.simulationDelta;
       while (physicsAccumulator >= STEP && steps < 4) {
+        physicsAccumulator -= STEP;
         for (let substep = 0; substep < SUBSTEPS; substep += 1) {
           Engine.update(engine, STEP / SUBSTEPS);
           mergePending();
+          if (finaleHoldRemaining > 0) {
+            // 合成发生在子步中：立即停止后续物理与判负，丢弃积压时间。
+            physicsAccumulator = 0;
+            break;
+          }
           updateDanger(STEP / SUBSTEPS / 1000);
           if (gameOver) break;
         }
-        physicsAccumulator -= STEP;
         steps += 1;
-        if (gameOver) break;
+        if (gameOver || finaleHoldRemaining > 0) break;
       }
       if (steps === 4 && physicsAccumulator >= STEP) physicsAccumulator = 0;
     }
@@ -1142,7 +1209,7 @@
   soundButton.addEventListener('click', toggleSound);
   motion = window.DagouMotion.create({
     target: window,
-    canShake: () => !gameOver && !paused && !document.hidden && visualsReady && !touchAiming,
+    canShake: () => !gameOver && !paused && !document.hidden && finaleHoldRemaining === 0 && visualsReady && !touchAiming,
     onShake: shakeDogs,
     onState: updateMotionUI,
   });

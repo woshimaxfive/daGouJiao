@@ -6,6 +6,14 @@
 
   const IMPACT_MS = 350;
   const POP_MS = 350;
+  const FINALE_HOLD_MS = 100;
+  const FINALE_RING_MS = 850;
+
+  // 跨过停顿结束的那一帧只推进剩余时间，不补算被暂停的物理时间。
+  function advanceFinaleHold(remaining, delta) {
+    const held = Math.min(remaining, delta);
+    return { remaining: remaining - held, simulationDelta: delta - held };
+  }
 
   function impact(age, strength) {
     if (age < 0 || age >= IMPACT_MS) return 0;
@@ -34,5 +42,6 @@
     };
   }
 
-  return Object.freeze({ impact, pop, tagAnchor, IMPACT_MS, POP_MS });
+  return Object.freeze({ impact, pop, tagAnchor, advanceFinaleHold,
+    IMPACT_MS, POP_MS, FINALE_HOLD_MS, FINALE_RING_MS });
 });

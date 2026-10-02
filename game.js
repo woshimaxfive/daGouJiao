@@ -74,6 +74,12 @@
   const pauseSummary = document.getElementById('pause-summary');
   const resumeButton = document.getElementById('resume-button');
   const newRoundButton = document.getElementById('new-round-button');
+  const shareButton = document.getElementById('share-card-button');
+  const shareDialog = document.getElementById('share-dialog');
+  const shareImage = document.getElementById('share-card-image');
+  const shareMessage = document.getElementById('share-message');
+  const shareDownload = document.getElementById('share-download');
+  let shareRequest = 0;
   const roundSave = window.DagouSave;
   // localStorage 的属性本身也可能被浏览器隐私设置禁止访问。
   let roundStorage;
@@ -544,7 +550,47 @@
     liveStatus.textContent = `游戏结束，本局 ${score} 分，时长 ${finalDuration.textContent}，投放 ${dropCount} 次，最高 ${result.maxLevel} 级${TIERS[result.maxTier].name}。${result.isNewRecord ? '刷新最高纪录！' : ''}`;
   }
 
+  function closeShare() {
+    shareRequest += 1;
+    if (shareDialog.open) shareDialog.close();
+    shareImage.hidden = true;
+    shareImage.removeAttribute('src');
+    shareDownload.hidden = true;
+    shareDownload.removeAttribute('href');
+  }
+
+  async function openShare() {
+    if (!gameOver || !result) return;
+    const request = ++shareRequest;
+    shareImage.hidden = true;
+    shareDownload.hidden = true;
+    shareMessage.textContent = '正在生成成绩图…';
+    if (!shareDialog.open) shareDialog.showModal();
+    const tier = TIERS[result.maxTier];
+    const summary = `${result.score.toLocaleString('zh-CN')} 分，最高 ${result.maxLevel} 级${tier.name}，时长 ${formatDuration(roundDurationMs)}，投放 ${dropCount} 次。`;
+    try {
+      const image = await window.DagouShare.render({
+        score: result.score, duration: formatDuration(roundDurationMs), drops: dropCount,
+        tierName: tier.name, tierLevel: result.maxLevel, tierColor: tier.color,
+        isNewRecord: result.isNewRecord, dogImage: tierImage(result.maxTier),
+      });
+      if (request !== shareRequest || !gameOver || !shareDialog.open) return;
+      shareImage.src = image;
+      await shareImage.decode();
+      if (request !== shareRequest || !gameOver || !shareDialog.open) return;
+      shareImage.alt = `合成大狗叫成绩图：${summary}底部二维码可打开游戏。`;
+      shareImage.hidden = false;
+      shareDownload.href = image;
+      shareDownload.download = `合成大狗叫-${result.score}分.png`;
+      shareDownload.hidden = false;
+      shareMessage.textContent = '手机长按图片保存，电脑点击下载。';
+    } catch {
+      if (request === shareRequest && shareDialog.open) shareMessage.textContent = '成绩图没准备好，请关闭后重试。';
+    }
+  }
+
   function reset(clearSave = true) {
+    closeShare();
     if (clearSave) roundSave.clear(roundStorage);
     stopFinaleAudio();
     if (engine) {
@@ -1070,6 +1116,7 @@
   canvas.addEventListener('pointercancel', () => { touchAiming = false; });
 
   document.addEventListener('keydown', event => {
+    if (shareDialog.open) return;
     const target = document.activeElement;
     const controlFocused = target && (target.tagName === 'BUTTON' || target.tagName === 'SUMMARY');
     if (controlFocused && (event.code === 'Space' || event.code === 'Enter')) return;
@@ -1089,6 +1136,9 @@
   document.getElementById('play-again-button').addEventListener('click', reset);
   resumeButton.addEventListener('click', resumeRound);
   newRoundButton.addEventListener('click', () => reset());
+  shareButton.addEventListener('click', openShare);
+  document.getElementById('close-share-button').addEventListener('click', closeShare);
+  shareDialog.addEventListener('cancel', event => { event.preventDefault(); closeShare(); });
   soundButton.addEventListener('click', toggleSound);
   motion = window.DagouMotion.create({
     target: window,

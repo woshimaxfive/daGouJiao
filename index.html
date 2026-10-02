@@ -7,7 +7,7 @@
   <meta name="description" content="把憋住的汪汪声合成一声大狗叫。">
   <title>合成大狗叫</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="style.css?v=18">
+  <link rel="stylesheet" href="style.css?v=19">
   <script defer src="vendor/matter.min.js"></script>
   <script defer src="game-rules.js"></script>
   <script defer src="game-save.js?v=17"></script>
@@ -16,7 +16,8 @@
   <script defer src="dog-physics.js?v=13"></script>
   <script defer src="dog-feedback.js"></script>
   <script defer src="dog-motion.js?v=17"></script>
-  <script defer src="game.js?v=18"></script>
+  <script defer src="share-card.js?v=19"></script>
+  <script defer src="game.js?v=19"></script>
 </head>
 <body>
   <div class="sky-scene" aria-hidden="true">
@@ -90,6 +91,7 @@
               </dl>
               <div class="over-tier"><img id="final-tier-image" alt=""><div><span>最高合成等级</span><strong id="final-tier"></strong></div><b id="final-tier-number"></b></div>
               <button id="play-again-button" type="button">再来一局</button>
+              <button class="share-card-button" id="share-card-button" type="button">保存成绩图</button>
             </div>
           </div>
         </div>
@@ -114,6 +116,12 @@
     </main>
     <footer class="site-footer"><span>一只狗，从闭麦到大狗叫。</span><span>DROP · MERGE · BARK</span></footer>
   </div>
+  <dialog class="share-dialog" id="share-dialog" aria-labelledby="share-dialog-title">
+    <div class="share-dialog-heading"><h2 id="share-dialog-title">晒一下这局</h2><button id="close-share-button" type="button" aria-label="关闭成绩图" autofocus>关闭</button></div>
+    <p id="share-message" role="status">手机长按图片保存，电脑点击下载。</p>
+    <img id="share-card-image" alt="本局成绩分享图" hidden>
+    <a class="share-download" id="share-download" hidden>下载图片</a>
+  </dialog>
   <div class="sr-only" id="live-status" role="status" aria-live="polite"></div>
 </body>
 </html>

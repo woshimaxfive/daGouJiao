@@ -146,6 +146,18 @@ button:focus-visible, a:focus-visible, canvas:focus-visible, summary:focus-visib
 .pause-card .pause-summary { margin: 16px 0; color: var(--ink); font-weight: 800; font-variant-numeric: tabular-nums; }
 .pause-card .secondary-action { margin-top: 10px; background: var(--white); color: var(--ink); }
 .pause-card .secondary-action:hover { background: #e9f4fc; }
+.game-over-card .share-card-button { margin-top: 10px; background: var(--white); color: var(--ink); }
+.game-over-card .share-card-button:hover { background: #e9f4fc; }
+.share-dialog { width: min(420px, calc(100% - 24px)); max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); margin: auto; padding: 16px; overflow: auto; border: 2px solid var(--ink); border-radius: 16px; background: var(--board); color: var(--ink); box-shadow: var(--shadow); }
+.share-dialog::backdrop { background: rgba(41, 60, 80, .7); }
+.share-dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.share-dialog h2 { margin: 0; font-size: 20px; }
+.share-dialog-heading button { min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); color: var(--ink); font-weight: 800; }
+.share-dialog p { margin: 8px 0 12px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.share-dialog img { display: block; width: 100%; height: auto; max-height: 65vh; object-fit: contain; border-radius: 8px; -webkit-touch-callout: default; user-select: auto; }
+.share-dialog img[hidden], .share-download[hidden] { display: none; }
+.share-download { display: grid; place-items: center; min-height: 44px; margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); color: var(--ink); font-size: 14px; font-weight: 800; text-decoration: none; }
+.share-download:hover { background: #e9f4fc; }
 
 .site-footer { display: flex; align-items: center; justify-content: space-between; min-height: 54px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .05em; }
 

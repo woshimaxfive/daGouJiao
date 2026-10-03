@@ -6,6 +6,17 @@
 
 [开始游戏](https://woshimaxfive.github.io/daGouJiao/)
 
+## 项目结构
+
+```text
+src/
+  js/        游戏脚本（规则、物理、存档、音效、分享等）
+  css/       页面样式
+assets/      狗图与音频
+vendor/      第三方物理库及许可证
+index.html   网页入口
+```
+
 ## 本地运行
 
 在项目目录执行：

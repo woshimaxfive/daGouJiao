@@ -4,7 +4,7 @@
   "private": true,
   "description": "大狗叫合成小游戏",
   "scripts": {
-    "check": "node --check game-rules.js && node --check game-save.js && node --check dog-visuals.js && node --check dog-shape.js && node --check dog-physics.js && node --check dog-feedback.js && node --check dog-motion.js && node --check share-card.js && node --check game.js && node --check vendor/matter.min.js",
+    "check": "node --check src/js/game-rules.js && node --check src/js/game-save.js && node --check src/js/dog-visuals.js && node --check src/js/dog-shape.js && node --check src/js/dog-physics.js && node --check src/js/dog-feedback.js && node --check src/js/dog-motion.js && node --check src/js/share-card.js && node --check src/js/game.js && node --check vendor/matter.min.js",
     "serve": "python -m http.server 8080"
   },
   "dependencies": {

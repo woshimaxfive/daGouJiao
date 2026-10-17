@@ -4,7 +4,7 @@
 })(globalThis, function () {
   'use strict';
 
-  const IMPACT_MS = 350;
+  const IMPACT_MS = 480;
   const POP_MS = 350;
   const FINALE_HOLD_MS = 100;
   const FINALE_RING_MS = 850;
@@ -17,8 +17,19 @@
 
   function impact(age, strength) {
     if (age < 0 || age >= IMPACT_MS) return 0;
-    return strength * 1.5 * Math.sin(Math.PI * age / 100)
-      * Math.exp(-age / 135) * (1 - age / IMPACT_MS);
+    return strength * Math.cos(2 * Math.PI * Math.max(0, age - 20) / 280)
+      * Math.exp(-age / 180) * (1 - age / IMPACT_MS);
+  }
+
+  function recordImpact(body, speed, angle, now) {
+    if (speed < 90) return false;
+    const strength = Math.min(0.3, speed / 1500);
+    // 复合碰撞体的多个子圆可能同时接触，只保留这一瞬间更强的撞击。
+    if (now - body.gameSquashAt < 100 && strength <= body.gameSquash + 0.025) return false;
+    body.gameSquash = strength;
+    body.gameSquashAt = now;
+    body.gameSquashAngle = angle;
+    return true;
   }
 
   function pop(age) {
@@ -42,6 +53,6 @@
     };
   }
 
-  return Object.freeze({ impact, pop, tagAnchor, advanceFinaleHold,
+  return Object.freeze({ impact, recordImpact, pop, tagAnchor, advanceFinaleHold,
     IMPACT_MS, POP_MS, FINALE_HOLD_MS, FINALE_RING_MS });
 });

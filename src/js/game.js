@@ -308,19 +308,10 @@
       if (a.gameTier !== undefined) a.gameLanded = true;
       if (b.gameTier !== undefined) b.gameLanded = true;
       const normal = pair.collision.normal;
-      const impact = Math.abs((a.velocity.x - b.velocity.x) * normal.x
-        + (a.velocity.y - b.velocity.y) * normal.y);
-      if (impact > 1.4) {
-        for (const body of [a, b]) {
-          if (body.gameTier === undefined) continue;
-          const amount = Math.min(0.24, impact * 0.04);
-          const age = elapsed - body.gameSquashAt;
-          const remaining = body.gameSquash * Math.max(0, 1 - age / feedback.IMPACT_MS);
-          if (age > 100 || amount > remaining + 0.025) {
-            body.gameSquash = amount;
-            body.gameSquashAt = elapsed;
-            body.gameSquashAngle = Math.atan2(normal.y, normal.x);
-          }
+      const speed = dogPhysics.impactSpeed(pair);
+      for (const body of [a, b]) {
+        if (body.gameTier !== undefined) {
+          feedback.recordImpact(body, speed, Math.atan2(normal.y, normal.x), elapsed);
         }
       }
       if (a.gameTier === undefined || b.gameTier === undefined) continue;

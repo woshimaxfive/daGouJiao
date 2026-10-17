@@ -12,7 +12,7 @@
         shape.visibleBounds[3] - shape.visibleBounds[1]);
       const scale = radius * 2 / longest;
       const options = {
-        restitution: 0.32 - Math.max(0, Math.min(9, tier)) * 0.012,
+        restitution: 0.42,
         friction: 0.42, frictionStatic: 0.65,
         frictionAir: 0.008, density: 0.00085, slop: 0.025,
       };
@@ -52,6 +52,14 @@
 
     // 同一只狗可能由多个子圆同时接触，等级、去重和警戒计时只记在父体。
     function parentBody(part) { return part.parent || part; }
+
+    // collisionStart 发生在速度归一化之前，用官方 getter 换算为像素/秒。
+    function impactSpeed(pair) {
+      const a = Body.getVelocity(parentBody(pair.bodyA));
+      const b = Body.getVelocity(parentBody(pair.bodyB));
+      const normal = pair.collision.normal;
+      return Math.max(0, -((a.x - b.x) * normal.x + (a.y - b.y) * normal.y)) * 60;
+    }
 
     function updateMotion(engine, pieces, enabled, tilt, deltaMs) {
       const targetGravity = Math.max(-1, Math.min(1, tilt)) * 3.2;
@@ -124,7 +132,7 @@
       return affected;
     }
 
-    return Object.freeze({ createDog, measure, keepInside, parentBody, updateMotion, shakeDogs, applyMergePulse });
+    return Object.freeze({ createDog, measure, keepInside, parentBody, impactSpeed, updateMotion, shakeDogs, applyMergePulse });
   }
 
   return Object.freeze({ withMatter });
